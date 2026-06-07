@@ -12,7 +12,21 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppUsersRouteImport } from './routes/_app/users'
+import { Route as AppToolsRouteImport } from './routes/_app/tools'
+import { Route as AppPetaRouteImport } from './routes/_app/peta'
+import { Route as AppPeralatanRouteImport } from './routes/_app/peralatan'
+import { Route as AppPengumumanRouteImport } from './routes/_app/pengumuman'
+import { Route as AppNotifikasiRouteImport } from './routes/_app/notifikasi'
+import { Route as AppLaporanOtomatisRouteImport } from './routes/_app/laporan-otomatis'
+import { Route as AppLaporanBaruRouteImport } from './routes/_app/laporan-baru'
+import { Route as AppKeamananRouteImport } from './routes/_app/keamanan'
+import { Route as AppKalenderRouteImport } from './routes/_app/kalender'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppChatAiRouteImport } from './routes/_app/chat-ai'
+import { Route as AppBigDataRouteImport } from './routes/_app/big-data'
+import { Route as AppArsipRouteImport } from './routes/_app/arsip'
+import { Route as AppAiAnalisisRouteImport } from './routes/_app/ai-analisis'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -28,35 +42,200 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppUsersRoute = AppUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppToolsRoute = AppToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPetaRoute = AppPetaRouteImport.update({
+  id: '/peta',
+  path: '/peta',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPeralatanRoute = AppPeralatanRouteImport.update({
+  id: '/peralatan',
+  path: '/peralatan',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPengumumanRoute = AppPengumumanRouteImport.update({
+  id: '/pengumuman',
+  path: '/pengumuman',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotifikasiRoute = AppNotifikasiRouteImport.update({
+  id: '/notifikasi',
+  path: '/notifikasi',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLaporanOtomatisRoute = AppLaporanOtomatisRouteImport.update({
+  id: '/laporan-otomatis',
+  path: '/laporan-otomatis',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLaporanBaruRoute = AppLaporanBaruRouteImport.update({
+  id: '/laporan-baru',
+  path: '/laporan-baru',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppKeamananRoute = AppKeamananRouteImport.update({
+  id: '/keamanan',
+  path: '/keamanan',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppKalenderRoute = AppKalenderRouteImport.update({
+  id: '/kalender',
+  path: '/kalender',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppChatAiRoute = AppChatAiRouteImport.update({
+  id: '/chat-ai',
+  path: '/chat-ai',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBigDataRoute = AppBigDataRouteImport.update({
+  id: '/big-data',
+  path: '/big-data',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppArsipRoute = AppArsipRouteImport.update({
+  id: '/arsip',
+  path: '/arsip',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAiAnalisisRoute = AppAiAnalisisRouteImport.update({
+  id: '/ai-analisis',
+  path: '/ai-analisis',
   getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/ai-analisis': typeof AppAiAnalisisRoute
+  '/arsip': typeof AppArsipRoute
+  '/big-data': typeof AppBigDataRoute
+  '/chat-ai': typeof AppChatAiRoute
   '/dashboard': typeof AppDashboardRoute
+  '/kalender': typeof AppKalenderRoute
+  '/keamanan': typeof AppKeamananRoute
+  '/laporan-baru': typeof AppLaporanBaruRoute
+  '/laporan-otomatis': typeof AppLaporanOtomatisRoute
+  '/notifikasi': typeof AppNotifikasiRoute
+  '/pengumuman': typeof AppPengumumanRoute
+  '/peralatan': typeof AppPeralatanRoute
+  '/peta': typeof AppPetaRoute
+  '/tools': typeof AppToolsRoute
+  '/users': typeof AppUsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/ai-analisis': typeof AppAiAnalisisRoute
+  '/arsip': typeof AppArsipRoute
+  '/big-data': typeof AppBigDataRoute
+  '/chat-ai': typeof AppChatAiRoute
   '/dashboard': typeof AppDashboardRoute
+  '/kalender': typeof AppKalenderRoute
+  '/keamanan': typeof AppKeamananRoute
+  '/laporan-baru': typeof AppLaporanBaruRoute
+  '/laporan-otomatis': typeof AppLaporanOtomatisRoute
+  '/notifikasi': typeof AppNotifikasiRoute
+  '/pengumuman': typeof AppPengumumanRoute
+  '/peralatan': typeof AppPeralatanRoute
+  '/peta': typeof AppPetaRoute
+  '/tools': typeof AppToolsRoute
+  '/users': typeof AppUsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_app/ai-analisis': typeof AppAiAnalisisRoute
+  '/_app/arsip': typeof AppArsipRoute
+  '/_app/big-data': typeof AppBigDataRoute
+  '/_app/chat-ai': typeof AppChatAiRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/kalender': typeof AppKalenderRoute
+  '/_app/keamanan': typeof AppKeamananRoute
+  '/_app/laporan-baru': typeof AppLaporanBaruRoute
+  '/_app/laporan-otomatis': typeof AppLaporanOtomatisRoute
+  '/_app/notifikasi': typeof AppNotifikasiRoute
+  '/_app/pengumuman': typeof AppPengumumanRoute
+  '/_app/peralatan': typeof AppPeralatanRoute
+  '/_app/peta': typeof AppPetaRoute
+  '/_app/tools': typeof AppToolsRoute
+  '/_app/users': typeof AppUsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/ai-analisis'
+    | '/arsip'
+    | '/big-data'
+    | '/chat-ai'
+    | '/dashboard'
+    | '/kalender'
+    | '/keamanan'
+    | '/laporan-baru'
+    | '/laporan-otomatis'
+    | '/notifikasi'
+    | '/pengumuman'
+    | '/peralatan'
+    | '/peta'
+    | '/tools'
+    | '/users'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard'
-  id: '__root__' | '/' | '/_app' | '/auth' | '/_app/dashboard'
+  to:
+    | '/'
+    | '/auth'
+    | '/ai-analisis'
+    | '/arsip'
+    | '/big-data'
+    | '/chat-ai'
+    | '/dashboard'
+    | '/kalender'
+    | '/keamanan'
+    | '/laporan-baru'
+    | '/laporan-otomatis'
+    | '/notifikasi'
+    | '/pengumuman'
+    | '/peralatan'
+    | '/peta'
+    | '/tools'
+    | '/users'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/auth'
+    | '/_app/ai-analisis'
+    | '/_app/arsip'
+    | '/_app/big-data'
+    | '/_app/chat-ai'
+    | '/_app/dashboard'
+    | '/_app/kalender'
+    | '/_app/keamanan'
+    | '/_app/laporan-baru'
+    | '/_app/laporan-otomatis'
+    | '/_app/notifikasi'
+    | '/_app/pengumuman'
+    | '/_app/peralatan'
+    | '/_app/peta'
+    | '/_app/tools'
+    | '/_app/users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -88,6 +267,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/users': {
+      id: '/_app/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AppUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tools': {
+      id: '/_app/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof AppToolsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/peta': {
+      id: '/_app/peta'
+      path: '/peta'
+      fullPath: '/peta'
+      preLoaderRoute: typeof AppPetaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/peralatan': {
+      id: '/_app/peralatan'
+      path: '/peralatan'
+      fullPath: '/peralatan'
+      preLoaderRoute: typeof AppPeralatanRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/pengumuman': {
+      id: '/_app/pengumuman'
+      path: '/pengumuman'
+      fullPath: '/pengumuman'
+      preLoaderRoute: typeof AppPengumumanRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/notifikasi': {
+      id: '/_app/notifikasi'
+      path: '/notifikasi'
+      fullPath: '/notifikasi'
+      preLoaderRoute: typeof AppNotifikasiRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/laporan-otomatis': {
+      id: '/_app/laporan-otomatis'
+      path: '/laporan-otomatis'
+      fullPath: '/laporan-otomatis'
+      preLoaderRoute: typeof AppLaporanOtomatisRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/laporan-baru': {
+      id: '/_app/laporan-baru'
+      path: '/laporan-baru'
+      fullPath: '/laporan-baru'
+      preLoaderRoute: typeof AppLaporanBaruRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/keamanan': {
+      id: '/_app/keamanan'
+      path: '/keamanan'
+      fullPath: '/keamanan'
+      preLoaderRoute: typeof AppKeamananRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/kalender': {
+      id: '/_app/kalender'
+      path: '/kalender'
+      fullPath: '/kalender'
+      preLoaderRoute: typeof AppKalenderRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -95,15 +344,71 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/chat-ai': {
+      id: '/_app/chat-ai'
+      path: '/chat-ai'
+      fullPath: '/chat-ai'
+      preLoaderRoute: typeof AppChatAiRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/big-data': {
+      id: '/_app/big-data'
+      path: '/big-data'
+      fullPath: '/big-data'
+      preLoaderRoute: typeof AppBigDataRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/arsip': {
+      id: '/_app/arsip'
+      path: '/arsip'
+      fullPath: '/arsip'
+      preLoaderRoute: typeof AppArsipRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ai-analisis': {
+      id: '/_app/ai-analisis'
+      path: '/ai-analisis'
+      fullPath: '/ai-analisis'
+      preLoaderRoute: typeof AppAiAnalisisRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAiAnalisisRoute: typeof AppAiAnalisisRoute
+  AppArsipRoute: typeof AppArsipRoute
+  AppBigDataRoute: typeof AppBigDataRoute
+  AppChatAiRoute: typeof AppChatAiRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppKalenderRoute: typeof AppKalenderRoute
+  AppKeamananRoute: typeof AppKeamananRoute
+  AppLaporanBaruRoute: typeof AppLaporanBaruRoute
+  AppLaporanOtomatisRoute: typeof AppLaporanOtomatisRoute
+  AppNotifikasiRoute: typeof AppNotifikasiRoute
+  AppPengumumanRoute: typeof AppPengumumanRoute
+  AppPeralatanRoute: typeof AppPeralatanRoute
+  AppPetaRoute: typeof AppPetaRoute
+  AppToolsRoute: typeof AppToolsRoute
+  AppUsersRoute: typeof AppUsersRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAiAnalisisRoute: AppAiAnalisisRoute,
+  AppArsipRoute: AppArsipRoute,
+  AppBigDataRoute: AppBigDataRoute,
+  AppChatAiRoute: AppChatAiRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppKalenderRoute: AppKalenderRoute,
+  AppKeamananRoute: AppKeamananRoute,
+  AppLaporanBaruRoute: AppLaporanBaruRoute,
+  AppLaporanOtomatisRoute: AppLaporanOtomatisRoute,
+  AppNotifikasiRoute: AppNotifikasiRoute,
+  AppPengumumanRoute: AppPengumumanRoute,
+  AppPeralatanRoute: AppPeralatanRoute,
+  AppPetaRoute: AppPetaRoute,
+  AppToolsRoute: AppToolsRoute,
+  AppUsersRoute: AppUsersRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
