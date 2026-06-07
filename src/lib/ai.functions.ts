@@ -61,7 +61,7 @@ Berikan analisis ringkas, profesional, dalam Bahasa Indonesia.`;
         prediksi: out.prediksi,
         sentimen: out.sentimen,
         risiko: out.risiko,
-        raw_json: out as unknown as Record<string, unknown>,
+        raw_json: out as never,
       })
       .select()
       .single();
@@ -172,7 +172,7 @@ Tulis dalam Bahasa Indonesia resmi, ringkas tapi lengkap, gunakan poin-poin bila
       tanggal_selesai: new Date().toISOString().split("T")[0],
       konten: text,
       ringkasan: text.slice(0, 400),
-      metadata: { total_laporan: laps?.length ?? 0 } as Record<string, unknown>,
+      metadata: { total_laporan: laps?.length ?? 0 } as never,
       created_by: context.userId,
     }).select().single();
     if (error) throw new Error(error.message);
