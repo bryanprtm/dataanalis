@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
-import { Activity, AlertTriangle, FileText, Archive, Wrench, TrendingUp, Radio } from "lucide-react";
+import { Activity, AlertTriangle, FileText, Archive, Wrench, TrendingUp, Radio, X } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: DashboardPage });
 
+type Filter = { kind: "jenis" | "urgensi" | "day"; value: string; label: string };
+
 function DashboardPage() {
+  const [filter, setFilter] = useState<Filter | null>(null);
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
