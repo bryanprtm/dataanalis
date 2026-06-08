@@ -72,7 +72,12 @@ function DashboardPage() {
                 <XAxis dataKey="day" stroke="var(--color-muted-foreground)" fontSize={11} />
                 <YAxis stroke="var(--color-muted-foreground)" fontSize={11} />
                 <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", fontSize: 12 }} />
-                <Line type="monotone" dataKey="count" stroke="var(--cyber-cyan)" strokeWidth={2} dot={{ fill: "var(--cyber-cyan)", r: 4 }} />
+                <Line type="monotone" dataKey="count" stroke="var(--cyber-cyan)" strokeWidth={2}
+                  dot={{ fill: "var(--cyber-cyan)", r: 4, cursor: "pointer" }}
+                  activeDot={{ r: 6, cursor: "pointer", onClick: (_: unknown, payload: { payload?: { dayKey: string; day: string } }) => {
+                    const p = payload?.payload; if (p) setFilter({ kind: "day", value: p.dayKey, label: `Hari ${p.day}` });
+                  } }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -82,7 +87,9 @@ function DashboardPage() {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={byUrgensi} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}>
+                <Pie data={byUrgensi} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}
+                  onClick={(d: { name?: string }) => d?.name && setFilter({ kind: "urgensi", value: d.name, label: `Urgensi ${d.name}` })}
+                  cursor="pointer">
                   {byUrgensi.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", fontSize: 12 }} />
@@ -110,7 +117,8 @@ function DashboardPage() {
                 <XAxis dataKey="name" stroke="var(--color-muted-foreground)" fontSize={11} />
                 <YAxis stroke="var(--color-muted-foreground)" fontSize={11} />
                 <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", fontSize: 12 }} />
-                <Bar dataKey="value" fill="var(--cyber-cyan)" radius={[4,4,0,0]} />
+                <Bar dataKey="value" fill="var(--cyber-cyan)" radius={[4,4,0,0]} cursor="pointer"
+                  onClick={(d: { name?: string }) => d?.name && setFilter({ kind: "jenis", value: d.name, label: `Jenis ${d.name}` })} />
               </BarChart>
             </ResponsiveContainer>
           </div>
