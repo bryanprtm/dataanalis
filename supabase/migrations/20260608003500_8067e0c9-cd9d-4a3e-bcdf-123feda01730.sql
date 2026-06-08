@@ -1,0 +1,1 @@
+DELETE FROM public.pengumuman WHERE judul='test'; DELETE FROM public.laporan WHERE judul='test op';
