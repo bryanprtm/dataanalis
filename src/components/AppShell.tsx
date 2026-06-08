@@ -6,6 +6,7 @@ import {
   Wrench, Megaphone, Map, Users, MessageSquare, Bell, ExternalLink, Shield,
   LogOut, Menu, X,
 } from "lucide-react";
+import sbtLogo from "@/assets/sbt-logo.jpeg.asset.json";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, code: "01" },
