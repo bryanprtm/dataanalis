@@ -15,7 +15,6 @@ export const analyzeLaporan = createServerFn({ method: "POST" })
       .from("laporan").select("*").eq("id", data.laporanId).single();
     if (error || !lap) throw new Error("Laporan tidak ditemukan");
 
-    const { generateText, Output } = await import("ai");
     const { createLovableAi } = await import("./ai-gateway.server");
     const ai = createLovableAi(key);
 
@@ -32,23 +31,39 @@ ${lap.isi}
 
 Berikan analisis ringkas, profesional, dalam Bahasa Indonesia.`;
 
-    const { experimental_output } = await generateText({
-      model: ai("google/gemini-3-flash-preview"),
-      prompt,
-      experimental_output: Output.object({
-        schema: z.object({
-          ringkasan: z.string().describe("Ringkasan situasi 2-4 kalimat"),
-          isu_menonjol: z.string().describe("Isu utama yang menonjol"),
-          potensi_kerawanan: z.string().describe("Potensi kerawanan kamtibmas"),
-          rekomendasi: z.string().describe("Rekomendasi langkah taktis"),
-          prediksi: z.string().describe("Prediksi perkembangan situasi"),
-          sentimen: z.enum(["positif", "netral", "negatif"]),
-          risiko: z.enum(["rendah", "sedang", "tinggi", "kritis"]),
-        }),
-      }),
+    const { generateObject } = await import("ai");
+    const schema = z.object({
+      ringkasan: z.string().describe("Ringkasan situasi 2-4 kalimat"),
+      isu_menonjol: z.string().describe("Isu utama yang menonjol"),
+      potensi_kerawanan: z.string().describe("Potensi kerawanan kamtibmas"),
+      rekomendasi: z.string().describe("Rekomendasi langkah taktis"),
+      prediksi: z.string().describe("Prediksi perkembangan situasi"),
+      sentimen: z.enum(["positif", "netral", "negatif"]),
+      risiko: z.enum(["rendah", "sedang", "tinggi", "kritis"]),
     });
 
-    const out = experimental_output;
+    let out: z.infer<typeof schema>;
+    try {
+      const res = await generateObject({
+        model: ai("google/gemini-2.5-flash"),
+        schema,
+        prompt: prompt + "\n\nBalas HANYA dengan JSON sesuai schema.",
+      });
+      out = res.object;
+    } catch {
+      // Fallback: ask for raw JSON and parse manually
+      const { generateText } = await import("ai");
+      const { text } = await generateText({
+        model: ai("google/gemini-2.5-flash"),
+        prompt: prompt + `\n\nBalas HANYA JSON valid dengan field: ringkasan, isu_menonjol, potensi_kerawanan, rekomendasi, prediksi, sentimen (positif|netral|negatif), risiko (rendah|sedang|tinggi|kritis). Tanpa markdown.`,
+      });
+      const cleaned = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+      const s = cleaned.indexOf("{");
+      const e = cleaned.lastIndexOf("}");
+      if (s === -1 || e === -1) throw new Error("AI tidak mengembalikan JSON valid");
+      out = schema.parse(JSON.parse(cleaned.substring(s, e + 1)));
+    }
+
 
     const { data: inserted, error: insErr } = await context.supabase
       .from("ai_analyses")
