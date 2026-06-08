@@ -15,6 +15,22 @@ export const analyzeLaporan = createServerFn({ method: "POST" })
       .from("laporan").select("*").eq("id", data.laporanId).single();
     if (error || !lap) throw new Error("Laporan tidak ditemukan");
 
+    const { createLovableAi } = await import("./ai-gateway.server");
+    const ai = createLovableAi(key);
+
+    const prompt = `Anda adalah analis intelijen TOC Sat Bantek Polri. Analisis laporan berikut dan berikan output JSON.
+
+JUDUL: ${lap.judul}
+JENIS: ${lap.jenis}
+POLDA: ${lap.polda ?? "-"} | WILAYAH: ${lap.wilayah ?? "-"} | LOKASI: ${lap.lokasi ?? "-"}
+URGENSI INPUT: ${lap.urgensi}
+TANGGAL KEJADIAN: ${lap.tanggal_kejadian ?? "-"}
+
+ISI LAPORAN:
+${lap.isi}
+
+Berikan analisis ringkas, profesional, dalam Bahasa Indonesia.`;
+
     const { generateObject } = await import("ai");
     const schema = z.object({
       ringkasan: z.string().describe("Ringkasan situasi 2-4 kalimat"),
