@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
-import { Activity, AlertTriangle, FileText, Archive, Wrench, TrendingUp, Radio } from "lucide-react";
+import { Activity, AlertTriangle, FileText, Archive, Wrench, TrendingUp, Radio, X } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: DashboardPage });
 
+type Filter = { kind: "jenis" | "urgensi" | "day"; value: string; label: string };
+
 function DashboardPage() {
+  const [filter, setFilter] = useState<Filter | null>(null);
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
@@ -34,7 +38,7 @@ function DashboardPage() {
     const d = new Date(); d.setDate(d.getDate() - (6 - i));
     const dayKey = d.toISOString().split("T")[0];
     const count = laporan.filter((l) => l.created_at.startsWith(dayKey)).length;
-    return { day: d.toLocaleDateString("id-ID", { weekday: "short" }), count };
+    return { day: d.toLocaleDateString("id-ID", { weekday: "short" }), count, dayKey };
   });
 
   const byJenis = ["intelijen","cyber","kejadian","kamtibmas"].map(j => ({
@@ -63,7 +67,13 @@ function DashboardPage() {
         <Panel title="Tren Laporan 7 Hari" className="lg:col-span-2">
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={last7}>
+              <LineChart data={last7}
+                onClick={(s: { activePayload?: Array<{ payload: { dayKey: string; day: string } }> }) => {
+                  const p = s?.activePayload?.[0]?.payload;
+                  if (p) setFilter({ kind: "day", value: p.dayKey, label: `Hari ${p.day}` });
+                }}
+                style={{ cursor: "pointer" }}
+              >
                 <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
                 <XAxis dataKey="day" stroke="var(--color-muted-foreground)" fontSize={11} />
                 <YAxis stroke="var(--color-muted-foreground)" fontSize={11} />
@@ -78,7 +88,9 @@ function DashboardPage() {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={byUrgensi} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}>
+                <Pie data={byUrgensi} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}
+                  onClick={(d: { name?: string }) => d?.name && setFilter({ kind: "urgensi", value: d.name, label: `Urgensi ${d.name}` })}
+                  cursor="pointer">
                   {byUrgensi.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", fontSize: 12 }} />
@@ -106,7 +118,8 @@ function DashboardPage() {
                 <XAxis dataKey="name" stroke="var(--color-muted-foreground)" fontSize={11} />
                 <YAxis stroke="var(--color-muted-foreground)" fontSize={11} />
                 <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", fontSize: 12 }} />
-                <Bar dataKey="value" fill="var(--cyber-cyan)" radius={[4,4,0,0]} />
+                <Bar dataKey="value" fill="var(--cyber-cyan)" radius={[4,4,0,0]} cursor="pointer"
+                  onClick={(d: { name?: string }) => d?.name && setFilter({ kind: "jenis", value: d.name, label: `Jenis ${d.name}` })} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -163,6 +176,59 @@ function DashboardPage() {
           </table>
         </div>
       </Panel>
+
+      {filter && (
+        <FilterModal filter={filter} laporan={laporan} onClose={() => setFilter(null)} />
+      )}
+    </div>
+  );
+}
+
+function FilterModal({ filter, laporan, onClose }: {
+  filter: Filter;
+  laporan: Array<{ id: string; judul: string; jenis: string; urgensi: string; polda: string | null; status: string; created_at: string }>;
+  onClose: () => void;
+}) {
+  const filtered = laporan.filter((l) => {
+    if (filter.kind === "jenis") return l.jenis === filter.value;
+    if (filter.kind === "urgensi") return l.urgensi === filter.value;
+    if (filter.kind === "day") return l.created_at.startsWith(filter.value);
+    return false;
+  });
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="panel p-6 w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-mono-display text-sm tracking-widest text-primary">[ LAPORAN — {filter.label.toUpperCase()} · {filtered.length} ]</h2>
+          <button onClick={onClose}><X className="w-4 h-4" /></button>
+        </div>
+        <div className="overflow-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-muted-foreground font-mono-display border-b border-border sticky top-0 bg-card">
+                <th className="py-2 pr-3">WAKTU</th><th className="py-2 pr-3">JUDUL</th>
+                <th className="py-2 pr-3">JENIS</th><th className="py-2 pr-3">POLDA</th>
+                <th className="py-2 pr-3">URGENSI</th><th className="py-2">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((l) => (
+                <tr key={l.id} className="border-b border-border/30">
+                  <td className="py-2 pr-3 font-mono text-muted-foreground">{new Date(l.created_at).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                  <td className="py-2 pr-3">{l.judul}</td>
+                  <td className="py-2 pr-3"><Badge variant="cyan">{l.jenis}</Badge></td>
+                  <td className="py-2 pr-3 text-muted-foreground">{l.polda ?? "—"}</td>
+                  <td className="py-2 pr-3"><Badge variant={URGENSI_VARIANT[l.urgensi as keyof typeof URGENSI_VARIANT]}>{l.urgensi}</Badge></td>
+                  <td className="py-2"><Badge variant="outline">{l.status}</Badge></td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={6} className="py-8 text-center text-muted-foreground font-mono">[ TIDAK ADA LAPORAN ]</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
