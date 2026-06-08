@@ -38,7 +38,7 @@ function DashboardPage() {
     const d = new Date(); d.setDate(d.getDate() - (6 - i));
     const dayKey = d.toISOString().split("T")[0];
     const count = laporan.filter((l) => l.created_at.startsWith(dayKey)).length;
-    return { day: d.toLocaleDateString("id-ID", { weekday: "short" }), count };
+    return { day: d.toLocaleDateString("id-ID", { weekday: "short" }), count, dayKey };
   });
 
   const byJenis = ["intelijen","cyber","kejadian","kamtibmas"].map(j => ({
@@ -176,6 +176,59 @@ function DashboardPage() {
           </table>
         </div>
       </Panel>
+
+      {filter && (
+        <FilterModal filter={filter} laporan={laporan} onClose={() => setFilter(null)} />
+      )}
+    </div>
+  );
+}
+
+function FilterModal({ filter, laporan, onClose }: {
+  filter: Filter;
+  laporan: Array<{ id: string; judul: string; jenis: string; urgensi: string; polda: string | null; status: string; created_at: string }>;
+  onClose: () => void;
+}) {
+  const filtered = laporan.filter((l) => {
+    if (filter.kind === "jenis") return l.jenis === filter.value;
+    if (filter.kind === "urgensi") return l.urgensi === filter.value;
+    if (filter.kind === "day") return l.created_at.startsWith(filter.value);
+    return false;
+  });
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="panel p-6 w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-mono-display text-sm tracking-widest text-primary">[ LAPORAN — {filter.label.toUpperCase()} · {filtered.length} ]</h2>
+          <button onClick={onClose}><X className="w-4 h-4" /></button>
+        </div>
+        <div className="overflow-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-muted-foreground font-mono-display border-b border-border sticky top-0 bg-card">
+                <th className="py-2 pr-3">WAKTU</th><th className="py-2 pr-3">JUDUL</th>
+                <th className="py-2 pr-3">JENIS</th><th className="py-2 pr-3">POLDA</th>
+                <th className="py-2 pr-3">URGENSI</th><th className="py-2">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((l) => (
+                <tr key={l.id} className="border-b border-border/30">
+                  <td className="py-2 pr-3 font-mono text-muted-foreground">{new Date(l.created_at).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                  <td className="py-2 pr-3">{l.judul}</td>
+                  <td className="py-2 pr-3"><Badge variant="cyan">{l.jenis}</Badge></td>
+                  <td className="py-2 pr-3 text-muted-foreground">{l.polda ?? "—"}</td>
+                  <td className="py-2 pr-3"><Badge variant={URGENSI_VARIANT[l.urgensi as keyof typeof URGENSI_VARIANT]}>{l.urgensi}</Badge></td>
+                  <td className="py-2"><Badge variant="outline">{l.status}</Badge></td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={6} className="py-8 text-center text-muted-foreground font-mono">[ TIDAK ADA LAPORAN ]</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
