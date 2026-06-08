@@ -356,6 +356,7 @@ export type Database = {
         Row: {
           catatan: string | null
           created_at: string
+          created_by: string | null
           id: string
           jumlah: number
           kategori: string | null
@@ -371,6 +372,7 @@ export type Database = {
         Insert: {
           catatan?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           jumlah?: number
           kategori?: string | null
@@ -386,6 +388,7 @@ export type Database = {
         Update: {
           catatan?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           jumlah?: number
           kategori?: string | null
