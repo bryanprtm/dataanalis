@@ -67,17 +67,18 @@ function DashboardPage() {
         <Panel title="Tren Laporan 7 Hari" className="lg:col-span-2">
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={last7}>
+              <LineChart data={last7}
+                onClick={(s: { activePayload?: Array<{ payload: { dayKey: string; day: string } }> }) => {
+                  const p = s?.activePayload?.[0]?.payload;
+                  if (p) setFilter({ kind: "day", value: p.dayKey, label: `Hari ${p.day}` });
+                }}
+                style={{ cursor: "pointer" }}
+              >
                 <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
                 <XAxis dataKey="day" stroke="var(--color-muted-foreground)" fontSize={11} />
                 <YAxis stroke="var(--color-muted-foreground)" fontSize={11} />
                 <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", fontSize: 12 }} />
-                <Line type="monotone" dataKey="count" stroke="var(--cyber-cyan)" strokeWidth={2}
-                  dot={{ fill: "var(--cyber-cyan)", r: 4, cursor: "pointer" }}
-                  activeDot={{ r: 6, cursor: "pointer", onClick: (_: unknown, payload: { payload?: { dayKey: string; day: string } }) => {
-                    const p = payload?.payload; if (p) setFilter({ kind: "day", value: p.dayKey, label: `Hari ${p.day}` });
-                  } }}
-                />
+                <Line type="monotone" dataKey="count" stroke="var(--cyber-cyan)" strokeWidth={2} dot={{ fill: "var(--cyber-cyan)", r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
