@@ -6,6 +6,7 @@ import {
   Wrench, Megaphone, Map, Users, MessageSquare, Bell, ExternalLink, Shield,
   LogOut, Menu, X,
 } from "lucide-react";
+import sbtLogo from "@/assets/sbt-logo.jpeg.asset.json";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, code: "01" },
@@ -36,8 +37,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className={`fixed lg:sticky top-0 left-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col transition-transform ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded bg-primary/10 border border-primary/40 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-primary text-glow-cyan" />
+            <div className="w-10 h-10 rounded bg-background border border-primary/40 flex items-center justify-center overflow-hidden">
+              <img src={sbtLogo.url} alt="Sat Bantek" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
               <div className="font-mono-display text-[10px] text-primary tracking-widest">[ TOC ]</div>

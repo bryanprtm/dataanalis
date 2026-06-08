@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Shield, Lock, User as UserIcon } from "lucide-react";
+import sbtLogo from "@/assets/sbt-logo.jpeg.asset.json";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -51,8 +52,8 @@ function AuthPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md panel scanline corner-brackets p-8 relative">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-md bg-primary/10 border border-primary/40 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-primary text-glow-cyan" />
+          <div className="w-14 h-14 rounded-md bg-background border border-primary/40 flex items-center justify-center overflow-hidden">
+            <img src={sbtLogo.url} alt="Sat Bantek" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="font-mono-display text-[10px] text-primary tracking-widest">[ SECURE_ACCESS ]</div>
