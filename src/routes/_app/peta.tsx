@@ -95,7 +95,7 @@ function PetaPage() {
       <PageHeader code="10" title="Peta Operasional" subtitle="Klik provinsi untuk melihat laporan wilayah" />
 
       <Panel title="Peta Sebaran Indonesia" glow className="relative">
-        <div className="relative w-full" style={{ aspectRatio: "1920 / 900" }}>
+        <div className="relative w-full" style={{ aspectRatio: "1920 / 881" }}>
           <img
             src={petaAsset.url}
             alt="Peta Provinsi Indonesia"
