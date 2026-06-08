@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Shield, Lock, User as UserIcon } from "lucide-react";
+import { Lock, User as UserIcon } from "lucide-react";
 import sbtLogo from "@/assets/sbt-logo.jpeg.asset.json";
 
 export const Route = createFileRoute("/auth")({
