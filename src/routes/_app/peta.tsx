@@ -66,7 +66,7 @@ function PetaPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("laporan")
-        .select("id,judul,polda,urgensi,wilayah,deskripsi,created_at")
+        .select("id,judul,polda,urgensi,wilayah,isi,created_at")
         .order("created_at", { ascending: false })
         .limit(500);
       return data ?? [];
@@ -193,7 +193,7 @@ function PetaPage() {
                 </div>
                 <div className="text-sm font-semibold">{l.judul}</div>
                 {l.wilayah && <div className="text-[11px] font-mono text-muted-foreground mt-0.5">📍 {l.wilayah}</div>}
-                {l.deskripsi && <div className="text-xs text-muted-foreground mt-1 line-clamp-3">{l.deskripsi}</div>}
+                {l.isi && <div className="text-xs text-muted-foreground mt-1 line-clamp-3">{l.isi}</div>}
               </div>
             ))}
           </div>
