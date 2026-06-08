@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useRole } from "@/hooks/useRole";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
 import { Megaphone, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/_app/pengumuman")({ component: Pengumuman
 
 function PengumumanPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const qc = useQueryClient();
   const [show, setShow] = useState(false);
   const [form, setForm] = useState({ judul: "", isi: "", prioritas: "sedang", target_subden: "" });
@@ -34,10 +36,10 @@ function PengumumanPage() {
 
   return (
     <div>
-      <PageHeader code="09" title="Pengumuman & Informasi Anggota" subtitle="Broadcast informasi & arahan pimpinan"
-        actions={<button onClick={() => setShow(!show)} className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-mono-display rounded"><Plus className="w-4 h-4" /> BROADCAST</button>} />
+      <PageHeader code="09" title="Pengumuman & Informasi Anggota" subtitle={isAdmin ? "Broadcast informasi & arahan pimpinan" : "Informasi & arahan pimpinan"}
+        actions={isAdmin ? <button onClick={() => setShow(!show)} className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-mono-display rounded"><Plus className="w-4 h-4" /> BROADCAST</button> : null} />
 
-      {show && (
+      {isAdmin && show && (
         <Panel title="Buat Pengumuman" className="mb-4">
           <div className="space-y-3">
             <input placeholder="Judul" className="w-full px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono"
