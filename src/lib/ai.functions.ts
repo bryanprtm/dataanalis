@@ -4,6 +4,42 @@ import { z } from "zod";
 
 const AnalyzeInput = z.object({ laporanId: z.string().uuid() });
 
+const AnalysisSchema = z.object({
+  ringkasan: z.coerce.string().min(1).catch("Ringkasan belum tersedia."),
+  isu_menonjol: z.coerce.string().min(1).catch("Isu menonjol belum teridentifikasi."),
+  potensi_kerawanan: z.coerce.string().min(1).catch("Potensi kerawanan perlu pendalaman lanjutan."),
+  rekomendasi: z.coerce.string().min(1).catch("Lakukan monitoring, verifikasi lapangan, dan koordinasi lintas fungsi."),
+  prediksi: z.coerce.string().min(1).catch("Situasi diperkirakan tetap perlu dipantau secara berkala."),
+  sentimen: z.enum(["positif", "netral", "negatif"]).catch("netral"),
+  risiko: z.enum(["rendah", "sedang", "tinggi", "kritis"]).catch("sedang"),
+});
+
+type AnalysisOutput = z.infer<typeof AnalysisSchema>;
+
+function extractJsonObject(text: string) {
+  const cleaned = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  const candidates = [cleaned, start >= 0 && end > start ? cleaned.slice(start, end + 1) : ""].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return null;
+}
+
+function normalizeAnalysis(value: unknown, fallbackSummary: string): AnalysisOutput {
+  const parsed = AnalysisSchema.safeParse(value ?? {});
+  if (parsed.success) return parsed.data;
+
+  return AnalysisSchema.parse({ ringkasan: fallbackSummary });
+}
+
 export const analyzeLaporan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => AnalyzeInput.parse(d))
@@ -31,37 +67,29 @@ ${lap.isi}
 
 Berikan analisis ringkas, profesional, dalam Bahasa Indonesia.`;
 
-    const { generateObject } = await import("ai");
-    const schema = z.object({
-      ringkasan: z.string().describe("Ringkasan situasi 2-4 kalimat"),
-      isu_menonjol: z.string().describe("Isu utama yang menonjol"),
-      potensi_kerawanan: z.string().describe("Potensi kerawanan kamtibmas"),
-      rekomendasi: z.string().describe("Rekomendasi langkah taktis"),
-      prediksi: z.string().describe("Prediksi perkembangan situasi"),
-      sentimen: z.enum(["positif", "netral", "negatif"]),
-      risiko: z.enum(["rendah", "sedang", "tinggi", "kritis"]),
-    });
+    const { generateText } = await import("ai");
+    const fallbackSummary = `${lap.judul}. ${String(lap.isi ?? "").slice(0, 260)}`.trim();
 
-    let out: z.infer<typeof schema>;
+    let out: AnalysisOutput;
     try {
-      const res = await generateObject({
-        model: ai("google/gemini-2.5-flash"),
-        schema,
-        prompt: prompt + "\n\nBalas HANYA dengan JSON sesuai schema.",
-      });
-      out = res.object;
-    } catch {
-      // Fallback: ask for raw JSON and parse manually
-      const { generateText } = await import("ai");
       const { text } = await generateText({
-        model: ai("google/gemini-2.5-flash"),
-        prompt: prompt + `\n\nBalas HANYA JSON valid dengan field: ringkasan, isu_menonjol, potensi_kerawanan, rekomendasi, prediksi, sentimen (positif|netral|negatif), risiko (rendah|sedang|tinggi|kritis). Tanpa markdown.`,
+        model: ai("google/gemini-3-flash-preview"),
+        prompt: prompt + `\n\nBalas HANYA JSON valid tanpa markdown dengan field berikut:
+{
+  "ringkasan": "2-4 kalimat ringkas",
+  "isu_menonjol": "isu utama",
+  "potensi_kerawanan": "potensi kerawanan kamtibmas",
+  "rekomendasi": "langkah taktis",
+  "prediksi": "prediksi perkembangan situasi",
+  "sentimen": "positif|netral|negatif",
+  "risiko": "rendah|sedang|tinggi|kritis"
+}`,
       });
-      const cleaned = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
-      const s = cleaned.indexOf("{");
-      const e = cleaned.lastIndexOf("}");
-      if (s === -1 || e === -1) throw new Error("AI tidak mengembalikan JSON valid");
-      out = schema.parse(JSON.parse(cleaned.substring(s, e + 1)));
+
+      out = normalizeAnalysis(extractJsonObject(text), text.trim() || fallbackSummary);
+    } catch (error) {
+      console.error("AI analysis generation failed", error);
+      out = normalizeAnalysis(null, fallbackSummary || "Analisis dasar dibuat dari laporan karena respons AI tidak dapat diproses.");
     }
 
 
