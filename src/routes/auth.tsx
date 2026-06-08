@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Shield, Lock, User as UserIcon } from "lucide-react";
+import { Lock, User as UserIcon } from "lucide-react";
 import sbtLogo from "@/assets/sbt-logo.jpeg.asset.json";
 
 export const Route = createFileRoute("/auth")({
@@ -13,14 +13,8 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [nama, setNama] = useState("");
-  const [pangkat, setPangkat] = useState("");
-  const [nrp, setNrp] = useState("");
-  const [subden, setSubden] = useState("");
-  const [polda, setPolda] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { if (!loading && user) navigate({ to: "/dashboard" }); }, [user, loading, navigate]);
@@ -29,18 +23,9 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email, password,
-          options: { data: { nama, pangkat, nrp, subden, polda, satuan: "Sat Bantek" }, emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        toast.success("Akun terdaftar. Mengalihkan...");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success("Login berhasil");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success("Login berhasil");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal");
     } finally {
@@ -62,35 +47,13 @@ function AuthPage() {
           </div>
         </div>
 
-        <div className="flex gap-1 mb-6 p-1 bg-muted/30 rounded-md">
-          {(["login","signup"] as const).map(m => (
-            <button key={m} onClick={() => setMode(m)}
-              className={`flex-1 py-2 text-xs font-mono-display tracking-wider rounded ${mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-              {m === "login" ? "LOGIN" : "DAFTAR"}
-            </button>
-          ))}
-        </div>
-
         <form onSubmit={submit} className="space-y-3">
-          {mode === "signup" && (
-            <>
-              <Field label="Nama Lengkap" value={nama} onChange={setNama} required />
-              <div className="grid grid-cols-2 gap-2">
-                <Field label="Pangkat" value={pangkat} onChange={setPangkat} placeholder="IPDA" />
-                <Field label="NRP" value={nrp} onChange={setNrp} />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Field label="Subden" value={subden} onChange={setSubden} placeholder="Subden 1" />
-                <Field label="Polda" value={polda} onChange={setPolda} placeholder="Metro Jaya" />
-              </div>
-            </>
-          )}
           <Field label="Email" type="email" value={email} onChange={setEmail} required icon={<UserIcon className="w-4 h-4" />} />
           <Field label="Password" type="password" value={password} onChange={setPassword} required icon={<Lock className="w-4 h-4" />} />
 
           <button type="submit" disabled={busy}
             className="w-full py-3 bg-primary text-primary-foreground font-mono-display tracking-wider text-sm rounded-md hover:opacity-90 disabled:opacity-50 transition">
-            {busy ? "[ PROCESSING... ]" : mode === "login" ? "[ AUTHENTICATE ]" : "[ REGISTER ]"}
+            {busy ? "[ PROCESSING... ]" : "[ AUTHENTICATE ]"}
           </button>
         </form>
 
