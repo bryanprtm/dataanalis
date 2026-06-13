@@ -33,6 +33,12 @@ function matchProvince(polda: string | null, prov: string): boolean {
   return p.includes(pr) || pr.includes(p);
 }
 
+function clampView(v: { x: number; y: number; k: number }, s: { w: number; h: number }) {
+  const minX = s.w - s.w * v.k;
+  const minY = s.h - s.h * v.k;
+  return { k: v.k, x: Math.min(0, Math.max(minX, v.x)), y: Math.min(0, Math.max(minY, v.y)) };
+}
+
 function PetaPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [hover, setHover] = useState<{ name: string; x: number; y: number } | null>(null);
