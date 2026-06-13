@@ -1,65 +1,60 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { geoMercator, geoPath, type GeoProjection } from "d3-geo";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MapPin, AlertTriangle } from "lucide-react";
-import petaAsset from "@/assets/peta-indonesia.png.asset.json";
+import geoAsset from "@/assets/indonesia-provinces.geojson.asset.json";
 
 export const Route = createFileRoute("/_app/peta")({ component: PetaPage });
 
-// Approximate label-center coordinates (% of image width/height)
-const PROVINCES: { name: string; x: number; y: number }[] = [
-  { name: "Aceh", x: 4.5, y: 19 },
-  { name: "Sumatra Utara", x: 7.5, y: 29 },
-  { name: "Riau", x: 11, y: 35 },
-  { name: "Kepulauan Riau", x: 16.5, y: 32 },
-  { name: "Sumatra Barat", x: 9, y: 41 },
-  { name: "Jambi", x: 12.5, y: 45 },
-  { name: "Bengkulu", x: 11.5, y: 54 },
-  { name: "Sumatra Selatan", x: 15.5, y: 52 },
-  { name: "Kepulauan Bangka Belitung", x: 19.5, y: 51 },
-  { name: "Lampung", x: 16.5, y: 62 },
-  { name: "Banten", x: 19.5, y: 70 },
-  { name: "Jakarta", x: 22, y: 69 },
-  { name: "Jawa Barat", x: 24, y: 73 },
-  { name: "Jawa Tengah", x: 27.5, y: 73 },
-  { name: "Yogyakarta", x: 29, y: 77 },
-  { name: "Jawa Timur", x: 31.5, y: 74 },
-  { name: "Bali", x: 36.5, y: 77 },
-  { name: "Nusa Tenggara Barat", x: 40, y: 78 },
-  { name: "Nusa Tenggara Timur", x: 46, y: 82 },
-  { name: "Kalimantan Barat", x: 30, y: 40 },
-  { name: "Kalimantan Tengah", x: 35, y: 48 },
-  { name: "Kalimantan Selatan", x: 40, y: 53 },
-  { name: "Kalimantan Timur", x: 40, y: 35 },
-  { name: "Kalimantan Utara", x: 42, y: 25 },
-  { name: "Sulawesi Utara", x: 54, y: 30 },
-  { name: "Gorontalo", x: 51, y: 35 },
-  { name: "Sulawesi Tengah", x: 52, y: 43 },
-  { name: "Sulawesi Barat", x: 49.5, y: 52 },
-  { name: "Sulawesi Selatan", x: 52, y: 60 },
-  { name: "Sulawesi Tenggara", x: 55.5, y: 55 },
-  { name: "Maluku Utara", x: 66, y: 32 },
-  { name: "Maluku", x: 69, y: 56 },
-  { name: "Papua Barat Daya", x: 73, y: 41 },
-  { name: "Papua Barat", x: 77.5, y: 47 },
-  { name: "Papua Tengah", x: 84, y: 53 },
-  { name: "Papua Pegunungan", x: 87, y: 50 },
-  { name: "Papua", x: 90, y: 46 },
-  { name: "Papua Selatan", x: 87, y: 62 },
-];
+type FC = { type: "FeatureCollection"; features: any[] };
 
 function matchProvince(polda: string | null, prov: string): boolean {
   if (!polda) return false;
-  const p = polda.toLowerCase().replace(/^polda\s+/, "").trim();
-  const pr = prov.toLowerCase();
-  return p === pr || p.includes(pr) || pr.includes(p);
+  const p = polda.toLowerCase().replace(/^polda\s+/, "").replace(/\s+/g, " ").trim();
+  const pr = prov.toLowerCase().replace(/\s+/g, " ").trim();
+  if (p === pr) return true;
+  // common aliases
+  const aliases: Record<string, string[]> = {
+    "dki jakarta": ["jakarta", "metro jaya"],
+    "di yogyakarta": ["yogyakarta", "diy"],
+    "kepulauan riau": ["kepri"],
+    "kepulauan bangka belitung": ["bangka belitung", "babel"],
+    "nusa tenggara barat": ["ntb"],
+    "nusa tenggara timur": ["ntt"],
+  };
+  for (const [k, vs] of Object.entries(aliases)) {
+    if (pr === k && vs.includes(p)) return true;
+    if (p === k && vs.includes(pr)) return true;
+  }
+  return p.includes(pr) || pr.includes(p);
 }
 
 function PetaPage() {
   const [selected, setSelected] = useState<string | null>(null);
+  const [hover, setHover] = useState<{ name: string; x: number; y: number } | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 1000, h: 460 });
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(() => {
+      const w = el.clientWidth;
+      setSize({ w, h: Math.round(w * 0.46) });
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { data: geo } = useQuery<FC>({
+    queryKey: ["idn-geojson"],
+    queryFn: async () => (await fetch(geoAsset.url)).json(),
+    staleTime: Infinity,
+  });
 
   const { data: laps } = useQuery({
     queryKey: ["peta-laps"],
@@ -73,16 +68,23 @@ function PetaPage() {
     },
   });
 
+  const { projection, pathGen } = useMemo(() => {
+    if (!geo) return { projection: null as GeoProjection | null, pathGen: null as ReturnType<typeof geoPath> | null };
+    const proj = geoMercator().fitSize([size.w, size.h], geo as any);
+    return { projection: proj, pathGen: geoPath(proj) };
+  }, [geo, size]);
+
   const counts = useMemo(() => {
     const m: Record<string, number> = {};
-    for (const p of PROVINCES) m[p.name] = 0;
+    if (!geo) return m;
+    for (const f of geo.features) m[f.properties.state] = 0;
     for (const l of laps ?? []) {
-      for (const p of PROVINCES) {
-        if (matchProvince(l.polda, p.name)) { m[p.name]++; break; }
+      for (const f of geo.features) {
+        if (matchProvince(l.polda, f.properties.state)) { m[f.properties.state]++; break; }
       }
     }
     return m;
-  }, [laps]);
+  }, [geo, laps]);
 
   const maxCount = Math.max(...Object.values(counts), 1);
   const selectedReports = useMemo(
@@ -90,73 +92,108 @@ function PetaPage() {
     [laps, selected]
   );
 
+  function fillFor(c: number) {
+    if (c === 0) return "oklch(0.28 0.04 200 / 0.4)";
+    const intensity = c / maxCount;
+    if (intensity > 0.66) return "var(--cyber-red)";
+    if (intensity > 0.33) return "var(--cyber-amber)";
+    return "var(--cyber-green)";
+  }
+
   return (
     <div>
-      <PageHeader code="10" title="Peta Operasional" subtitle="Klik provinsi untuk melihat laporan wilayah" />
+      <PageHeader code="10" title="Peta Operasional" subtitle="Peta provinsi interaktif — sumber data: cahyadsn/wilayah" />
 
       <Panel title="Peta Sebaran Indonesia" glow className="relative">
-        <div className="relative w-full" style={{ aspectRatio: "1920 / 881" }}>
-          <img
-            src={petaAsset.url}
-            alt="Peta Provinsi Indonesia"
-            className="absolute inset-0 w-full h-full object-contain select-none pointer-events-none"
-            draggable={false}
-            style={{ filter: "saturate(0.85) brightness(0.95) contrast(1.05)" }}
-          />
-          {/* Hotspots */}
-          {PROVINCES.map((p) => {
-            const c = counts[p.name] ?? 0;
-            const intensity = c / maxCount;
-            const size = 14 + intensity * 24;
-            const color = c === 0
-              ? "var(--cyber-cyan)"
-              : intensity > 0.66 ? "var(--cyber-red)"
-              : intensity > 0.33 ? "var(--cyber-amber)"
-              : "var(--cyber-green)";
-            return (
-              <button
-                key={p.name}
-                onClick={() => setSelected(p.name)}
-                className="absolute -translate-x-1/2 -translate-y-1/2 group focus:outline-none"
-                style={{ left: `${p.x}%`, top: `${p.y}%` }}
-                title={`${p.name} — ${c} laporan`}
-              >
-                <span
-                  className="block rounded-full transition-transform group-hover:scale-125"
-                  style={{
-                    width: size, height: size,
-                    background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
-                    boxShadow: c > 0 ? `0 0 12px ${color}` : "none",
-                  }}
-                />
-                <span
-                  className="block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border"
-                  style={{ width: 6, height: 6, background: color, borderColor: color, boxShadow: `0 0 8px ${color}` }}
-                />
-                {c > 0 && (
-                  <span
-                    className="absolute left-1/2 -translate-x-1/2 top-full mt-0.5 text-[9px] font-mono-display font-bold px-1 rounded"
-                    style={{ color, background: "rgba(0,0,0,0.6)" }}
-                  >
-                    {c}
-                  </span>
-                )}
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity absolute left-1/2 -translate-x-1/2 -top-6 whitespace-nowrap text-[10px] font-mono-display bg-background/90 border border-primary/40 px-1.5 py-0.5 rounded text-primary">
-                  {p.name}
-                </span>
-              </button>
-            );
-          })}
+        <div ref={wrapRef} className="relative w-full">
+          {geo && pathGen ? (
+            <svg
+              width={size.w}
+              height={size.h}
+              viewBox={`0 0 ${size.w} ${size.h}`}
+              className="block w-full"
+              style={{ background: "transparent" }}
+            >
+              {/* Grid backdrop */}
+              <defs>
+                <pattern id="cybergrid" width="32" height="32" patternUnits="userSpaceOnUse">
+                  <path d="M 32 0 L 0 0 0 32" fill="none" stroke="var(--cyber-grid)" strokeWidth="0.5" />
+                </pattern>
+                <filter id="glow"><feGaussianBlur stdDeviation="2" /></filter>
+              </defs>
+              <rect width={size.w} height={size.h} fill="url(#cybergrid)" />
+
+              {geo.features.map((f, i) => {
+                const name = f.properties.state as string;
+                const c = counts[name] ?? 0;
+                const d = pathGen(f as any) ?? "";
+                const isSel = selected === name;
+                return (
+                  <path
+                    key={i}
+                    d={d}
+                    fill={fillFor(c)}
+                    fillOpacity={c === 0 ? 0.35 : 0.7}
+                    stroke={isSel ? "var(--cyber-cyan)" : "oklch(0.82 0.18 175 / 0.5)"}
+                    strokeWidth={isSel ? 1.6 : 0.6}
+                    style={{ cursor: "pointer", transition: "fill-opacity 120ms" }}
+                    onMouseEnter={(e) => {
+                      const r = wrapRef.current!.getBoundingClientRect();
+                      setHover({ name, x: e.clientX - r.left, y: e.clientY - r.top });
+                    }}
+                    onMouseMove={(e) => {
+                      const r = wrapRef.current!.getBoundingClientRect();
+                      setHover({ name, x: e.clientX - r.left, y: e.clientY - r.top });
+                    }}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => setSelected(name)}
+                  />
+                );
+              })}
+
+              {/* Count labels on provinces with reports */}
+              {geo.features.map((f, i) => {
+                const name = f.properties.state as string;
+                const c = counts[name] ?? 0;
+                if (c === 0 || !projection) return null;
+                const centroid = pathGen!.centroid(f as any);
+                if (!isFinite(centroid[0])) return null;
+                return (
+                  <g key={`l-${i}`} pointerEvents="none">
+                    <circle cx={centroid[0]} cy={centroid[1]} r={9} fill="rgba(0,0,0,0.65)" stroke={fillFor(c)} strokeWidth={1} />
+                    <text x={centroid[0]} y={centroid[1] + 3} textAnchor="middle" fontSize={10} fontFamily="JetBrains Mono, monospace" fill={fillFor(c)} fontWeight={700}>
+                      {c}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          ) : (
+            <div className="aspect-[1000/460] flex items-center justify-center font-mono-display text-primary/70 text-xs">
+              [ LOADING_TACTICAL_MAP... ]
+            </div>
+          )}
+
+          {hover && (
+            <div
+              className="pointer-events-none absolute z-10 font-mono-display text-[10px] bg-background/95 border border-primary/40 px-2 py-1 rounded text-primary whitespace-nowrap"
+              style={{ left: hover.x + 12, top: hover.y + 12 }}
+            >
+              {hover.name} — {counts[hover.name] ?? 0} laporan
+            </div>
+          )}
+
           <div className="absolute bottom-1 left-2 text-[10px] font-mono-display text-primary/70">[ TACTICAL_GRID_LIVE ]</div>
-          <div className="absolute top-1 right-2 text-[10px] font-mono-display text-muted-foreground">38 PROVINSI</div>
+          <div className="absolute top-1 right-2 text-[10px] font-mono-display text-muted-foreground">
+            {geo ? `${geo.features.length} PROVINSI` : "—"}
+          </div>
         </div>
 
-        {/* Legend */}
         <div className="mt-3 flex flex-wrap gap-3 text-[10px] font-mono-display text-muted-foreground">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: "var(--cyber-cyan)" }} /> Tidak ada laporan</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: "var(--cyber-green)" }} /> Rendah</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: "var(--cyber-amber)" }} /> Sedang</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: "var(--cyber-red)" }} /> Tinggi</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: "oklch(0.28 0.04 200 / 0.4)" }} /> Tidak ada laporan</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: "var(--cyber-green)" }} /> Rendah</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: "var(--cyber-amber)" }} /> Sedang</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: "var(--cyber-red)" }} /> Tinggi</span>
         </div>
       </Panel>
 
