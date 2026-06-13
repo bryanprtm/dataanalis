@@ -38,6 +38,8 @@ function PetaPage() {
   const [hover, setHover] = useState<{ name: string; x: number; y: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 1000, h: 460 });
+  const [view, setView] = useState({ x: 0, y: 0, k: 1 });
+  const panRef = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -49,6 +51,20 @@ function PetaPage() {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  const zoomAt = (factor: number, cx?: number, cy?: number) => {
+    setView((v) => {
+      const nk = Math.min(8, Math.max(1, v.k * factor));
+      if (nk === v.k) return v;
+      const px = cx ?? size.w / 2;
+      const py = cy ?? size.h / 2;
+      // keep point under cursor stable: (px - x)/k == (px - nx)/nk
+      const nx = px - ((px - v.x) * nk) / v.k;
+      const ny = py - ((py - v.y) * nk) / v.k;
+      return clampView({ x: nx, y: ny, k: nk }, size);
+    });
+  };
+  const resetView = () => setView({ x: 0, y: 0, k: 1 });
 
   const { data: geo } = useQuery<FC>({
     queryKey: ["idn-geojson"],
