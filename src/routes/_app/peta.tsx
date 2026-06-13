@@ -33,11 +33,19 @@ function matchProvince(polda: string | null, prov: string): boolean {
   return p.includes(pr) || pr.includes(p);
 }
 
+function clampView(v: { x: number; y: number; k: number }, s: { w: number; h: number }) {
+  const minX = s.w - s.w * v.k;
+  const minY = s.h - s.h * v.k;
+  return { k: v.k, x: Math.min(0, Math.max(minX, v.x)), y: Math.min(0, Math.max(minY, v.y)) };
+}
+
 function PetaPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [hover, setHover] = useState<{ name: string; x: number; y: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 1000, h: 460 });
+  const [view, setView] = useState({ x: 0, y: 0, k: 1 });
+  const panRef = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -49,6 +57,20 @@ function PetaPage() {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  const zoomAt = (factor: number, cx?: number, cy?: number) => {
+    setView((v) => {
+      const nk = Math.min(8, Math.max(1, v.k * factor));
+      if (nk === v.k) return v;
+      const px = cx ?? size.w / 2;
+      const py = cy ?? size.h / 2;
+      // keep point under cursor stable: (px - x)/k == (px - nx)/nk
+      const nx = px - ((px - v.x) * nk) / v.k;
+      const ny = py - ((py - v.y) * nk) / v.k;
+      return clampView({ x: nx, y: ny, k: nk }, size);
+    });
+  };
+  const resetView = () => setView({ x: 0, y: 0, k: 1 });
 
   const { data: geo } = useQuery<FC>({
     queryKey: ["idn-geojson"],
@@ -105,14 +127,36 @@ function PetaPage() {
       <PageHeader code="10" title="Peta Operasional" subtitle="Peta provinsi interaktif — sumber data: cahyadsn/wilayah" />
 
       <Panel title="Peta Sebaran Indonesia" glow className="relative">
-        <div ref={wrapRef} className="relative w-full">
+        <div ref={wrapRef} className="relative w-full overflow-hidden">
           {geo && pathGen ? (
             <svg
               width={size.w}
               height={size.h}
               viewBox={`0 0 ${size.w} ${size.h}`}
-              className="block w-full"
-              style={{ background: "transparent" }}
+              className="block w-full select-none"
+              style={{ background: "transparent", cursor: panRef.current ? "grabbing" : "grab", touchAction: "none" }}
+              onWheel={(e) => {
+                e.preventDefault();
+                const r = wrapRef.current!.getBoundingClientRect();
+                const cx = ((e.clientX - r.left) / r.width) * size.w;
+                const cy = ((e.clientY - r.top) / r.height) * size.h;
+                zoomAt(e.deltaY < 0 ? 1.2 : 1 / 1.2, cx, cy);
+              }}
+              onPointerDown={(e) => {
+                (e.target as Element).setPointerCapture?.(e.pointerId);
+                panRef.current = { sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y };
+              }}
+              onPointerMove={(e) => {
+                if (!panRef.current) return;
+                const r = wrapRef.current!.getBoundingClientRect();
+                const scaleX = size.w / r.width;
+                const scaleY = size.h / r.height;
+                const dx = (e.clientX - panRef.current.sx) * scaleX;
+                const dy = (e.clientY - panRef.current.sy) * scaleY;
+                setView((v) => clampView({ k: v.k, x: panRef.current!.ox + dx, y: panRef.current!.oy + dy }, size));
+              }}
+              onPointerUp={() => { panRef.current = null; }}
+              onPointerLeave={() => { panRef.current = null; }}
             >
               {/* Grid backdrop */}
               <defs>
@@ -123,6 +167,7 @@ function PetaPage() {
               </defs>
               <rect width={size.w} height={size.h} fill="url(#cybergrid)" />
 
+              <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
               {geo.features.map((f, i) => {
                 const name = f.properties.state as string;
                 const c = counts[name] ?? 0;
@@ -135,7 +180,8 @@ function PetaPage() {
                     fill={fillFor(c)}
                     fillOpacity={c === 0 ? 0.35 : 0.7}
                     stroke={isSel ? "var(--cyber-cyan)" : "oklch(0.82 0.18 175 / 0.5)"}
-                    strokeWidth={isSel ? 1.6 : 0.6}
+                    strokeWidth={(isSel ? 1.6 : 0.6) / view.k}
+                    vectorEffect="non-scaling-stroke"
                     style={{ cursor: "pointer", transition: "fill-opacity 120ms" }}
                     onMouseEnter={(e) => {
                       const r = wrapRef.current!.getBoundingClientRect();
@@ -146,7 +192,7 @@ function PetaPage() {
                       setHover({ name, x: e.clientX - r.left, y: e.clientY - r.top });
                     }}
                     onMouseLeave={() => setHover(null)}
-                    onClick={() => setSelected(name)}
+                    onClick={(e) => { if (!panRef.current) setSelected(name); e.stopPropagation(); }}
                   />
                 );
               })}
@@ -158,21 +204,45 @@ function PetaPage() {
                 if (c === 0 || !projection) return null;
                 const centroid = pathGen!.centroid(f as any);
                 if (!isFinite(centroid[0])) return null;
+                const r = 9 / view.k;
                 return (
                   <g key={`l-${i}`} pointerEvents="none">
-                    <circle cx={centroid[0]} cy={centroid[1]} r={9} fill="rgba(0,0,0,0.65)" stroke={fillFor(c)} strokeWidth={1} />
-                    <text x={centroid[0]} y={centroid[1] + 3} textAnchor="middle" fontSize={10} fontFamily="JetBrains Mono, monospace" fill={fillFor(c)} fontWeight={700}>
+                    <circle cx={centroid[0]} cy={centroid[1]} r={r} fill="rgba(0,0,0,0.65)" stroke={fillFor(c)} strokeWidth={1 / view.k} />
+                    <text x={centroid[0]} y={centroid[1] + 3 / view.k} textAnchor="middle" fontSize={10 / view.k} fontFamily="JetBrains Mono, monospace" fill={fillFor(c)} fontWeight={700}>
                       {c}
                     </text>
                   </g>
                 );
               })}
+              </g>
             </svg>
           ) : (
             <div className="aspect-[1000/460] flex items-center justify-center font-mono-display text-primary/70 text-xs">
               [ LOADING_TACTICAL_MAP... ]
             </div>
           )}
+
+          {/* Zoom controls */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1 z-20">
+            <button
+              onClick={() => zoomAt(1.3)}
+              className="w-8 h-8 rounded bg-background/80 border border-primary/40 text-primary font-mono-display text-sm hover:bg-primary/20 transition"
+              aria-label="Zoom in"
+            >+</button>
+            <button
+              onClick={() => zoomAt(1 / 1.3)}
+              className="w-8 h-8 rounded bg-background/80 border border-primary/40 text-primary font-mono-display text-sm hover:bg-primary/20 transition"
+              aria-label="Zoom out"
+            >−</button>
+            <button
+              onClick={resetView}
+              className="w-8 h-8 rounded bg-background/80 border border-primary/40 text-primary font-mono-display text-[10px] hover:bg-primary/20 transition"
+              aria-label="Reset"
+            >⌂</button>
+          </div>
+          <div className="absolute top-2 right-2 text-[10px] font-mono-display text-muted-foreground bg-background/60 px-2 py-0.5 rounded">
+            {(view.k * 100).toFixed(0)}%
+          </div>
 
           {hover && (
             <div
