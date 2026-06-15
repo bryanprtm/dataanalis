@@ -45,7 +45,8 @@ function PetaPage() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 1000, h: 460 });
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
-  const panRef = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
+  const panRef = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null);
+  const draggedRef = useRef(false);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -134,7 +135,7 @@ function PetaPage() {
               height={size.h}
               viewBox={`0 0 ${size.w} ${size.h}`}
               className="block w-full select-none"
-              style={{ background: "transparent", cursor: panRef.current ? "grabbing" : "grab", touchAction: "none" }}
+              style={{ background: "transparent", cursor: "grab", touchAction: "none" }}
               onWheel={(e) => {
                 e.preventDefault();
                 const r = wrapRef.current!.getBoundingClientRect();
@@ -143,19 +144,22 @@ function PetaPage() {
                 zoomAt(e.deltaY < 0 ? 1.2 : 1 / 1.2, cx, cy);
               }}
               onPointerDown={(e) => {
-                (e.target as Element).setPointerCapture?.(e.pointerId);
-                panRef.current = { sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y };
+                panRef.current = { sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y, moved: false };
+                draggedRef.current = false;
               }}
               onPointerMove={(e) => {
                 if (!panRef.current) return;
                 const r = wrapRef.current!.getBoundingClientRect();
+                const rawDx = e.clientX - panRef.current.sx;
+                const rawDy = e.clientY - panRef.current.sy;
+                if (!panRef.current.moved && Math.hypot(rawDx, rawDy) < 5) return;
+                panRef.current.moved = true;
+                draggedRef.current = true;
                 const scaleX = size.w / r.width;
                 const scaleY = size.h / r.height;
-                const dx = (e.clientX - panRef.current.sx) * scaleX;
-                const dy = (e.clientY - panRef.current.sy) * scaleY;
-                setView((v) => clampView({ k: v.k, x: panRef.current!.ox + dx, y: panRef.current!.oy + dy }, size));
+                setView((v) => clampView({ k: v.k, x: panRef.current!.ox + rawDx * scaleX, y: panRef.current!.oy + rawDy * scaleY }, size));
               }}
-              onPointerUp={() => { panRef.current = null; }}
+              onPointerUp={() => { panRef.current = null; setTimeout(() => { draggedRef.current = false; }, 0); }}
               onPointerLeave={() => { panRef.current = null; }}
             >
               {/* Grid backdrop */}
@@ -192,7 +196,7 @@ function PetaPage() {
                       setHover({ name, x: e.clientX - r.left, y: e.clientY - r.top });
                     }}
                     onMouseLeave={() => setHover(null)}
-                    onClick={(e) => { if (!panRef.current) setSelected(name); e.stopPropagation(); }}
+                    onClick={(e) => { e.stopPropagation(); if (!draggedRef.current) setSelected(name); }}
                   />
                 );
               })}
