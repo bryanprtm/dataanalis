@@ -57,7 +57,8 @@ function PersonilPage() {
         const { error } = await supabase.from("personil" as never).update(payload as never).eq("id", editingId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("personil" as never).insert(payload as never);
+        const { data: u } = await supabase.auth.getUser();
+        const { error } = await supabase.from("personil" as never).insert({ ...payload, created_by: u.user?.id } as never);
         if (error) throw error;
       }
     },
