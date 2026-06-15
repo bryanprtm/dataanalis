@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
-import { Search, Filter, Plus, Pencil, Trash2, X } from "lucide-react";
+import { Search, Filter, Plus, Pencil, Trash2, X, Download, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { downloadCSV, downloadPDF } from "@/lib/export-utils";
 
 export const Route = createFileRoute("/_app/big-data")({ component: BigDataPage });
 
@@ -62,10 +63,19 @@ function BigDataPage() {
 
   const canEdit = (r: Row) => isAdmin || r.created_by === user?.id;
 
+  const exportData = () => (rows ?? []).map(r => [
+    r.judul, r.jenis, r.urgensi, r.polda ?? "", new Date(r.created_at).toLocaleString("id-ID"), r.isi,
+  ]);
+  const headers = ["Judul", "Jenis", "Urgensi", "Polda", "Tanggal", "Isi"];
+
   return (
     <div>
       <PageHeader code="02" title="Big Data Informasi" subtitle="Bank data informasi dari seluruh Subden Bantis"
-        actions={<Link to="/laporan-baru" className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-mono-display rounded"><Plus className="w-4 h-4" /> INPUT BARU</Link>} />
+        actions={<>
+          <button onClick={() => downloadCSV("big-data-informasi", headers, exportData())} className="inline-flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-xs font-mono-display rounded hover:border-primary"><Download className="w-4 h-4" /> CSV</button>
+          <button onClick={() => downloadPDF("Big Data Informasi", headers, exportData())} className="inline-flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-xs font-mono-display rounded hover:border-primary"><FileText className="w-4 h-4" /> PDF</button>
+          <Link to="/laporan-baru" className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-mono-display rounded"><Plus className="w-4 h-4" /> INPUT BARU</Link>
+        </>} />
 
       <Panel title="Filter & Pencarian" className="mb-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
