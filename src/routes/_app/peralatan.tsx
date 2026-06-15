@@ -185,7 +185,7 @@ function PeralatanPage() {
                   </td>
                 </tr>
               ))}
-              {data?.length === 0 && <tr><td colSpan={7} className="py-8 text-center text-muted-foreground font-mono">[ NO_DATA ]</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={7} className="py-8 text-center text-muted-foreground font-mono">[ NO_DATA ]</td></tr>}
             </tbody>
           </table>
         </div>
