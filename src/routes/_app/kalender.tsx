@@ -26,6 +26,9 @@ function KalenderPage() {
   const [show, setShow] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [q, setQ] = useState("");
+  const [fUrg, setFUrg] = useState("");
+  const [fKat, setFKat] = useState("");
 
   const { data: items } = useQuery({
     queryKey: ["kegiatan"],
