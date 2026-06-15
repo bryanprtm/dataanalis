@@ -128,6 +128,9 @@ function titleCase(value: string): string {
 function provinceName(feature: GeoFeature, index: number): string {
   const props = feature.properties ?? {};
   const keys = [
+    "state",
+    "State",
+    "STATE",
     "Propinsi",
     "PROVINSI",
     "provinsi",
