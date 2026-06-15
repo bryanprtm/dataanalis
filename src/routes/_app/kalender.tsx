@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
-import { Calendar as CalIcon, Plus, Pencil, Trash2, X } from "lucide-react";
+import { Calendar as CalIcon, Plus, Pencil, Trash2, X, Download, FileText, Search } from "lucide-react";
 import { toast } from "sonner";
+import { downloadCSV, downloadPDF } from "@/lib/export-utils";
 
 export const Route = createFileRoute("/_app/kalender")({ component: KalenderPage });
 
