@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
-import { Search, Filter, Plus, Pencil, Trash2, X } from "lucide-react";
+import { Search, Filter, Plus, Pencil, Trash2, X, Download, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { downloadCSV, downloadPDF } from "@/lib/export-utils";
 
 export const Route = createFileRoute("/_app/big-data")({ component: BigDataPage });
 
