@@ -161,7 +161,11 @@ function matchProvince(polda: string | null, province: string): boolean {
   if (p === pr || p.includes(pr) || pr.includes(p)) return true;
 
   const aliases: Record<string, string[]> = {
-    "dki jakarta": ["jakarta", "metro jaya", "daerah khusus ibukota jakarta"],
+    "jakarta raya": ["jakarta", "metro jaya", "dki", "dki jakarta", "daerah khusus ibukota jakarta"],
+    "dki jakarta": ["jakarta", "metro jaya", "jakarta raya"],
+    "yogyakarta": ["di yogyakarta", "diy", "daerah istimewa yogyakarta"],
+    "daerah istimewa yogyakarta": ["yogyakarta", "diy", "di yogyakarta"],
+    "bangka belitung": ["babel", "kepulauan bangka belitung", "kep babel"],
     "daerah istimewa yogyakarta": ["yogyakarta", "diy", "di yogyakarta"],
     "kepulauan bangka belitung": ["bangka belitung", "babel", "kepulauan babel", "kep babel"],
     "kepulauan riau": ["kepri", "kep riau"],
