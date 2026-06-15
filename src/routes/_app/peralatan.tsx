@@ -166,7 +166,7 @@ function PeralatanPage() {
               <th className="py-2 text-right">AKSI</th>
             </tr></thead>
             <tbody>
-              {data?.map(p => (
+              {filtered.map(p => (
                 <tr key={p.id} className="border-b border-border/30 hover:bg-accent/30">
                   <td className="py-2 pr-3 font-medium"><span className="inline-flex items-center gap-2"><Wrench className="w-3 h-3 text-primary" />{p.nama}</span></td>
                   <td className="py-2 pr-3 text-muted-foreground">{p.kategori ?? "—"}</td>
