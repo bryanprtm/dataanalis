@@ -1,47 +1,167 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { MapPin, AlertTriangle } from "lucide-react";
-import mapAsset from "@/assets/indonesia-map.svg.asset.json";
+import mapAsset from "@/assets/indonesia-provinces.geojson.asset.json";
 
 export const Route = createFileRoute("/_app/peta")({ component: PetaPage });
 
-// Province group IDs in the SVG (junwatu/indonesia-map)
-const PROVINCE_IDS = [
-  "Aceh","Bali","Banten","Bengkulu","Daerah-Istimewa-Yogyakarta","Gorontalo",
-  "Jambi","Jawa-Barat","Jawa-Tengah","Jawa-Timur","Kalimantan-Barat",
-  "Kalimantan-Selatan","Kalimantan-Tengah","Kalimantan-Utara---Kalimantan-Timur",
-  "Kepulauan-Riau","Lampung","Maluku","Maluku-Utara","Nusa-Tenggara-Barat",
-  "Nusa-Tenggara-Timur","Papua","Papua-Barat","Riau","Sulawesi-Barat",
-  "Sulawesi-Selatan","Sulawesi-Tengah","Sulawesi-Tenggara","Sulawesi-Utara",
-  "Sumatera-Barat","Sumatera-Selatan","Sumatera-Utara",
-];
+const MAP_WIDTH = 2021;
+const MAP_HEIGHT = 922;
 
-function idToName(id: string): string {
-  return id.replace(/---/g, " + ").replace(/-/g, " ");
+type GeoFeature = {
+  type: "Feature";
+  id?: string | number;
+  properties?: Record<string, unknown>;
+  geometry: { type: string; coordinates: unknown };
+};
+
+type GeoCollection = {
+  type: "FeatureCollection";
+  features: GeoFeature[];
+};
+
+type LonLat = [number, number];
+type Bounds = { minLon: number; maxLon: number; minLat: number; maxLat: number };
+
+function collectLonLat(input: unknown, output: LonLat[] = []): LonLat[] {
+  if (!Array.isArray(input)) return output;
+  if (typeof input[0] === "number" && typeof input[1] === "number") {
+    const lon = input[0];
+    const lat = input[1];
+    if (lon >= 90 && lon <= 145 && lat >= -15 && lat <= 10) output.push([lon, lat]);
+    return output;
+  }
+  for (const item of input) collectLonLat(item, output);
+  return output;
 }
 
-function normalize(s: string): string {
-  return s.toLowerCase().replace(/^polda\s+/, "").replace(/\s+/g, " ").trim();
+function boundsFor(features: GeoFeature[]): Bounds | null {
+  const points = features.flatMap((feature) => collectLonLat(feature.geometry.coordinates));
+  if (points.length === 0) return null;
+  return points.reduce(
+    (bounds, [lon, lat]) => ({
+      minLon: Math.min(bounds.minLon, lon),
+      maxLon: Math.max(bounds.maxLon, lon),
+      minLat: Math.min(bounds.minLat, lat),
+      maxLat: Math.max(bounds.maxLat, lat),
+    }),
+    { minLon: Infinity, maxLon: -Infinity, minLat: Infinity, maxLat: -Infinity },
+  );
 }
 
-function matchProvince(polda: string | null, provDisplay: string): boolean {
+function createProject(bounds: Bounds) {
+  const paddingX = 68;
+  const paddingY = 44;
+  const spanLon = Math.max(bounds.maxLon - bounds.minLon, 1);
+  const spanLat = Math.max(bounds.maxLat - bounds.minLat, 1);
+  const scale = Math.min(
+    (MAP_WIDTH - paddingX * 2) / spanLon,
+    (MAP_HEIGHT - paddingY * 2) / spanLat,
+  );
+  const offsetX = (MAP_WIDTH - spanLon * scale) / 2;
+  const offsetY = (MAP_HEIGHT - spanLat * scale) / 2;
+
+  return ([lon, lat]: LonLat) => [
+    (lon - bounds.minLon) * scale + offsetX,
+    (bounds.maxLat - lat) * scale + offsetY,
+  ];
+}
+
+function isLonLat(value: unknown): value is LonLat {
+  return (
+    Array.isArray(value) &&
+    typeof value[0] === "number" &&
+    typeof value[1] === "number" &&
+    value[0] >= 90 &&
+    value[0] <= 145 &&
+    value[1] >= -15 &&
+    value[1] <= 10
+  );
+}
+
+function ringPath(ring: unknown, project: (point: LonLat) => number[]): string {
+  if (!Array.isArray(ring)) return "";
+  const points = ring.filter(isLonLat).map(project);
+  if (points.length < 3) return "";
+  return `${points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`).join(" ")}Z`;
+}
+
+function featurePath(feature: GeoFeature, project: (point: LonLat) => number[]): string {
+  const coordinates = feature.geometry.coordinates;
+  if (!Array.isArray(coordinates)) return "";
+  const polygons = feature.geometry.type === "MultiPolygon" ? coordinates.flat() : coordinates;
+  return polygons.map((ring) => ringPath(ring, project)).join(" ");
+}
+
+function normalize(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/^polda\s+/, "")
+    .replace(/kep\./g, "kepulauan")
+    .replace(/d\.i\./g, "daerah istimewa")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function titleCase(value: string): string {
+  return value
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => (part.length <= 3 ? part.toUpperCase() : part[0].toUpperCase() + part.slice(1)))
+    .join(" ")
+    .replace("Dki", "DKI")
+    .replace("Di ", "DI ");
+}
+
+function provinceName(feature: GeoFeature, index: number): string {
+  const props = feature.properties ?? {};
+  const keys = [
+    "Propinsi",
+    "PROVINSI",
+    "provinsi",
+    "Province",
+    "province",
+    "name",
+    "NAME",
+    "Nama",
+    "nama",
+    "Propinsi_1",
+  ];
+
+  for (const key of keys) {
+    const value = props[key];
+    if (typeof value === "string" && value.trim()) return titleCase(value.trim());
+  }
+
+  const fallback = Object.values(props).find(
+    (value) => typeof value === "string" && value.trim().length > 2,
+  );
+  return typeof fallback === "string" ? titleCase(fallback) : `Provinsi ${index + 1}`;
+}
+
+function matchProvince(polda: string | null, province: string): boolean {
   if (!polda) return false;
   const p = normalize(polda);
-  const pr = normalize(provDisplay);
-  if (p === pr) return true;
-  // Combined Kaltim + Kaltara polygon
-  if (provDisplay.includes("+")) {
-    const parts = provDisplay.split("+").map((x) => normalize(x));
-    if (parts.includes(p)) return true;
-    if (p.includes("kalimantan timur") || p.includes("kalimantan utara") || p === "kaltim" || p === "kaltara") return true;
-  }
+  const pr = normalize(province);
+  if (p === pr || p.includes(pr) || pr.includes(p)) return true;
+
   const aliases: Record<string, string[]> = {
+    "dki jakarta": ["jakarta", "metro jaya", "daerah khusus ibukota jakarta"],
     "daerah istimewa yogyakarta": ["yogyakarta", "diy", "di yogyakarta"],
-    "kepulauan riau": ["kepri"],
+    "kepulauan bangka belitung": ["bangka belitung", "babel", "kepulauan babel", "kep babel"],
+    "kepulauan riau": ["kepri", "kep riau"],
     "nusa tenggara barat": ["ntb"],
     "nusa tenggara timur": ["ntt"],
     "sumatera utara": ["sumut"],
@@ -50,6 +170,8 @@ function matchProvince(polda: string | null, provDisplay: string): boolean {
     "kalimantan barat": ["kalbar"],
     "kalimantan tengah": ["kalteng"],
     "kalimantan selatan": ["kalsel"],
+    "kalimantan timur": ["kaltim"],
+    "kalimantan utara": ["kaltara"],
     "sulawesi utara": ["sulut"],
     "sulawesi tengah": ["sulteng"],
     "sulawesi selatan": ["sulsel"],
@@ -60,29 +182,32 @@ function matchProvince(polda: string | null, provDisplay: string): boolean {
     "jawa tengah": ["jateng"],
     "jawa timur": ["jatim"],
   };
-  for (const [k, vs] of Object.entries(aliases)) {
-    if (pr === k && vs.includes(p)) return true;
-  }
-  return p === pr;
+
+  return (
+    aliases[pr]?.some((alias) => p === normalize(alias) || p.includes(normalize(alias))) ?? false
+  );
 }
 
 function PetaPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [hover, setHover] = useState<{ name: string; x: number; y: number } | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const svgHostRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
-  const panRef = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(
+    null,
+  );
   const draggedRef = useRef(false);
 
-  // Load SVG markup
-  const { data: svgText } = useQuery<string>({
-    queryKey: ["indo-svg-junwatu"],
-    queryFn: async () => (await fetch(mapAsset.url)).text(),
+  const { data: geoData } = useQuery<GeoCollection>({
+    queryKey: ["indo-geojson-34-provinces"],
+    queryFn: async () => {
+      const response = await fetch(mapAsset.url);
+      if (!response.ok) throw new Error("Gagal memuat peta provinsi");
+      return response.json();
+    },
     staleTime: Infinity,
   });
 
-  // Load laporan
   const { data: laps } = useQuery({
     queryKey: ["peta-laps"],
     queryFn: async () => {
@@ -95,189 +220,223 @@ function PetaPage() {
     },
   });
 
+  const provinceFeatures = useMemo(
+    () =>
+      (geoData?.features ?? []).map((feature, index) => ({
+        feature,
+        name: provinceName(feature, index),
+      })),
+    [geoData],
+  );
+
+  const pathFor = useMemo(() => {
+    const bounds = boundsFor(provinceFeatures.map(({ feature }) => feature));
+    if (!bounds) return null;
+    const project = createProject(bounds);
+    return (feature: GeoFeature) => featurePath(feature, project);
+  }, [provinceFeatures]);
+
   const counts = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const id of PROVINCE_IDS) m[idToName(id)] = 0;
-    for (const l of laps ?? []) {
-      for (const id of PROVINCE_IDS) {
-        const name = idToName(id);
-        if (matchProvince(l.polda, name)) { m[name]++; break; }
-      }
+    const map: Record<string, number> = {};
+    for (const { name } of provinceFeatures) map[name] = 0;
+    for (const lap of laps ?? []) {
+      const province = provinceFeatures.find(({ name }) => matchProvince(lap.polda, name));
+      if (province) map[province.name] += 1;
     }
-    return m;
-  }, [laps]);
+    return map;
+  }, [laps, provinceFeatures]);
 
   const maxCount = Math.max(...Object.values(counts), 1);
   const selectedReports = useMemo(
-    () => (laps ?? []).filter((l) => selected && matchProvince(l.polda, selected)),
-    [laps, selected]
+    () => (laps ?? []).filter((lap) => selected && matchProvince(lap.polda, selected)),
+    [laps, selected],
   );
 
-  const fillFor = useCallback((c: number) => {
-    if (c === 0) return "oklch(0.28 0.04 200 / 0.55)";
-    const intensity = c / maxCount;
+  const fillFor = (count: number) => {
+    if (count === 0) return "oklch(0.28 0.04 200 / 0.62)";
+    const intensity = count / maxCount;
     if (intensity > 0.66) return "var(--cyber-red)";
     if (intensity > 0.33) return "var(--cyber-amber)";
     return "var(--cyber-green)";
-  }, [maxCount]);
-
-  // Wire SVG: colors, hover, click
-  useEffect(() => {
-    const host = svgHostRef.current;
-    if (!host || !svgText) return;
-    const svg = host.querySelector("svg");
-    if (!svg) return;
-    svg.setAttribute("width", "100%");
-    svg.setAttribute("height", "100%");
-    svg.style.display = "block";
-
-    // Hide ocean rect, dim outsider
-    const lautan = svg.querySelector("#Lautan rect");
-    if (lautan) (lautan as SVGElement).setAttribute("style", "fill:transparent;stroke:none;");
-    const outsider = svg.querySelector("#Outsider");
-    if (outsider) (outsider as SVGElement).setAttribute("opacity", "0.18");
-
-    const cleanups: Array<() => void> = [];
-
-    for (const id of PROVINCE_IDS) {
-      const g = svg.querySelector(`#${CSS.escape(id)}`) as SVGGElement | null;
-      if (!g) continue;
-      const name = idToName(id);
-      const c = counts[name] ?? 0;
-      const fill = fillFor(c);
-      const paths = g.querySelectorAll("path, polygon, rect");
-      paths.forEach((p) => {
-        (p as SVGElement).setAttribute("fill", fill);
-        (p as SVGElement).setAttribute("fill-opacity", c === 0 ? "0.5" : "0.85");
-        (p as SVGElement).setAttribute("stroke", selected === name ? "var(--cyber-cyan)" : "oklch(0.82 0.18 175 / 0.55)");
-        (p as SVGElement).setAttribute("stroke-width", selected === name ? "1.6" : "0.6");
-        (p as SVGElement).setAttribute("vector-effect", "non-scaling-stroke");
-      });
-      g.style.cursor = "pointer";
-      g.style.transition = "fill-opacity 120ms";
-
-      const onEnter = (e: Event) => {
-        const ev = e as MouseEvent;
-        const r = wrapRef.current!.getBoundingClientRect();
-        setHover({ name, x: ev.clientX - r.left, y: ev.clientY - r.top });
-        paths.forEach((p) => (p as SVGElement).setAttribute("fill-opacity", "1"));
-      };
-      const onMove = (e: Event) => {
-        const ev = e as MouseEvent;
-        const r = wrapRef.current!.getBoundingClientRect();
-        setHover({ name, x: ev.clientX - r.left, y: ev.clientY - r.top });
-      };
-      const onLeave = () => {
-        setHover(null);
-        paths.forEach((p) => (p as SVGElement).setAttribute("fill-opacity", c === 0 ? "0.5" : "0.85"));
-      };
-      const onClick = (e: Event) => {
-        e.stopPropagation();
-        if (!draggedRef.current) setSelected(name);
-      };
-      g.addEventListener("mouseenter", onEnter);
-      g.addEventListener("mousemove", onMove);
-      g.addEventListener("mouseleave", onLeave);
-      g.addEventListener("click", onClick);
-      cleanups.push(() => {
-        g.removeEventListener("mouseenter", onEnter);
-        g.removeEventListener("mousemove", onMove);
-        g.removeEventListener("mouseleave", onLeave);
-        g.removeEventListener("click", onClick);
-      });
-    }
-    return () => { cleanups.forEach((fn) => fn()); };
-  }, [svgText, counts, selected, fillFor]);
+  };
 
   const zoomAt = (factor: number) => {
-    setView((v) => {
-      const nk = Math.min(8, Math.max(1, v.k * factor));
-      return { x: v.x, y: v.y, k: nk };
-    });
+    setView((current) => ({ ...current, k: Math.min(8, Math.max(1, current.k * factor)) }));
   };
+
   const resetView = () => setView({ x: 0, y: 0, k: 1 });
+
+  const selectProvince = (name: string) => {
+    if (!draggedRef.current && !panRef.current?.moved) setSelected(name);
+  };
 
   return (
     <div>
-      <PageHeader code="10" title="Peta Operasional" subtitle="Peta provinsi Indonesia interaktif — sumber SVG: junwatu/indonesia-map" />
+      <PageHeader
+        code="10"
+        title="Peta Operasional"
+        subtitle="Peta provinsi Indonesia interaktif — 34 provinsi dapat diklik"
+      />
 
       <Panel title="Peta Sebaran Indonesia" glow className="relative">
         <div
           ref={wrapRef}
           className="relative w-full overflow-hidden rounded border border-primary/20"
-          style={{ aspectRatio: "2021 / 922", background: "oklch(0.16 0.03 220 / 0.6)", touchAction: "none" }}
-          onWheel={(e) => {
-            e.preventDefault();
-            zoomAt(e.deltaY < 0 ? 1.2 : 1 / 1.2);
+          style={{
+            aspectRatio: `${MAP_WIDTH} / ${MAP_HEIGHT}`,
+            background: "oklch(0.16 0.03 220 / 0.6)",
+            touchAction: "none",
           }}
-          onPointerDown={(e) => {
-            panRef.current = { sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y, moved: false };
+          onWheel={(event) => {
+            event.preventDefault();
+            zoomAt(event.deltaY < 0 ? 1.2 : 1 / 1.2);
+          }}
+          onPointerDown={(event) => {
+            panRef.current = {
+              sx: event.clientX,
+              sy: event.clientY,
+              ox: view.x,
+              oy: view.y,
+              moved: false,
+            };
             draggedRef.current = false;
-            (e.currentTarget as HTMLDivElement).style.cursor = "grabbing";
+            event.currentTarget.style.cursor = "grabbing";
           }}
-          onPointerMove={(e) => {
+          onPointerMove={(event) => {
             if (!panRef.current) return;
-            const dx = e.clientX - panRef.current.sx;
-            const dy = e.clientY - panRef.current.sy;
+            const dx = event.clientX - panRef.current.sx;
+            const dy = event.clientY - panRef.current.sy;
             if (!panRef.current.moved && Math.hypot(dx, dy) < 5) return;
             panRef.current.moved = true;
             draggedRef.current = true;
-            setView((v) => ({ k: v.k, x: panRef.current!.ox + dx, y: panRef.current!.oy + dy }));
+            setView((current) => ({
+              k: current.k,
+              x: panRef.current!.ox + dx,
+              y: panRef.current!.oy + dy,
+            }));
           }}
-          onPointerUp={(e) => {
+          onPointerUp={(event) => {
             panRef.current = null;
-            (e.currentTarget as HTMLDivElement).style.cursor = "grab";
-            setTimeout(() => { draggedRef.current = false; }, 0);
+            event.currentTarget.style.cursor = "grab";
+            setTimeout(() => {
+              draggedRef.current = false;
+            }, 0);
           }}
-          onPointerLeave={(e) => {
+          onPointerLeave={(event) => {
             panRef.current = null;
-            (e.currentTarget as HTMLDivElement).style.cursor = "grab";
+            draggedRef.current = false;
+            event.currentTarget.style.cursor = "grab";
           }}
         >
-          {/* Grid backdrop */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40">
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none opacity-40"
+            aria-hidden="true"
+          >
             <defs>
               <pattern id="cybergrid2" width="32" height="32" patternUnits="userSpaceOnUse">
-                <path d="M 32 0 L 0 0 0 32" fill="none" stroke="var(--cyber-grid)" strokeWidth="0.5" />
+                <path
+                  d="M 32 0 L 0 0 0 32"
+                  fill="none"
+                  stroke="var(--cyber-grid)"
+                  strokeWidth="0.5"
+                />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#cybergrid2)" />
           </svg>
 
-          {svgText ? (
-            <div
-              ref={svgHostRef}
-              className="absolute inset-0"
+          {pathFor ? (
+            <svg
+              className="absolute inset-0 h-full w-full"
+              viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+              role="img"
+              aria-label="Peta operasional Indonesia 34 provinsi"
               style={{
                 transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`,
                 transformOrigin: "0 0",
                 cursor: "grab",
               }}
-              dangerouslySetInnerHTML={{ __html: svgText }}
-            />
+            >
+              <g>
+                {provinceFeatures.map(({ feature, name }, index) => {
+                  const count = counts[name] ?? 0;
+                  const isSelected = selected === name;
+                  const isHovered = hover?.name === name;
+                  return (
+                    <path
+                      key={`${name}-${feature.id ?? index}`}
+                      d={pathFor(feature as never) ?? ""}
+                      fill={fillFor(count)}
+                      fillOpacity={isHovered || isSelected ? 1 : count === 0 ? 0.58 : 0.86}
+                      stroke={isSelected ? "var(--cyber-cyan)" : "oklch(0.82 0.18 175 / 0.58)"}
+                      strokeWidth={isSelected ? 2.4 : 1.15}
+                      vectorEffect="non-scaling-stroke"
+                      className="cursor-pointer transition-[fill-opacity,stroke-width] duration-150 outline-none"
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Buka laporan ${name}`}
+                      onPointerEnter={(event) => {
+                        const rect = wrapRef.current?.getBoundingClientRect();
+                        if (rect) {
+                          setHover({
+                            name,
+                            x: event.clientX - rect.left,
+                            y: event.clientY - rect.top,
+                          });
+                        }
+                      }}
+                      onPointerMove={(event) => {
+                        const rect = wrapRef.current?.getBoundingClientRect();
+                        if (rect) {
+                          setHover({
+                            name,
+                            x: event.clientX - rect.left,
+                            y: event.clientY - rect.top,
+                          });
+                        }
+                      }}
+                      onPointerLeave={() => setHover(null)}
+                      onPointerUp={() => selectProvince(name)}
+                      onClick={() => selectProvince(name)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setSelected(name);
+                        }
+                      }}
+                    />
+                  );
+                })}
+              </g>
+            </svg>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center font-mono-display text-primary/70 text-xs">
               [ LOADING_TACTICAL_MAP... ]
             </div>
           )}
 
-          {/* Zoom controls */}
           <div className="absolute top-2 left-2 flex flex-col gap-1 z-20">
             <button
               onClick={() => zoomAt(1.3)}
               className="w-8 h-8 rounded bg-background/80 border border-primary/40 text-primary font-mono-display text-sm hover:bg-primary/20 transition"
               aria-label="Zoom in"
-            >+</button>
+            >
+              +
+            </button>
             <button
               onClick={() => zoomAt(1 / 1.3)}
               className="w-8 h-8 rounded bg-background/80 border border-primary/40 text-primary font-mono-display text-sm hover:bg-primary/20 transition"
               aria-label="Zoom out"
-            >−</button>
+            >
+              −
+            </button>
             <button
               onClick={resetView}
               className="w-8 h-8 rounded bg-background/80 border border-primary/40 text-primary font-mono-display text-[10px] hover:bg-primary/20 transition"
               aria-label="Reset"
-            >⌂</button>
+            >
+              ⌂
+            </button>
           </div>
           <div className="absolute top-2 right-2 text-[10px] font-mono-display text-muted-foreground bg-background/60 px-2 py-0.5 rounded z-20">
             {(view.k * 100).toFixed(0)}%
@@ -292,21 +451,38 @@ function PetaPage() {
             </div>
           )}
 
-          <div className="absolute bottom-1 left-2 text-[10px] font-mono-display text-primary/70 z-20">[ TACTICAL_GRID_LIVE ]</div>
+          <div className="absolute bottom-1 left-2 text-[10px] font-mono-display text-primary/70 z-20">
+            [ TACTICAL_GRID_LIVE ]
+          </div>
           <div className="absolute bottom-1 right-2 text-[10px] font-mono-display text-muted-foreground z-20">
-            {PROVINCE_IDS.length} REGION
+            {provinceFeatures.length || 34} PROVINSI
           </div>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-3 text-[10px] font-mono-display text-muted-foreground">
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: "oklch(0.28 0.04 200 / 0.55)" }} /> Tidak ada laporan</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: "var(--cyber-green)" }} /> Rendah</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: "var(--cyber-amber)" }} /> Sedang</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: "var(--cyber-red)" }} /> Tinggi</span>
+          <span className="flex items-center gap-1">
+            <span
+              className="w-3 h-3 rounded-sm"
+              style={{ background: "oklch(0.28 0.04 200 / 0.62)" }}
+            />{" "}
+            Tidak ada laporan
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-sm" style={{ background: "var(--cyber-green)" }} />{" "}
+            Rendah
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-sm" style={{ background: "var(--cyber-amber)" }} />{" "}
+            Sedang
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-sm" style={{ background: "var(--cyber-red)" }} />{" "}
+            Tinggi
+          </span>
         </div>
       </Panel>
 
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="max-w-2xl panel scanline border-primary/40">
           <DialogHeader>
             <DialogTitle className="font-mono-display text-glow-cyan flex items-center gap-2">
@@ -322,24 +498,37 @@ function PetaPage() {
                 [ NO_REPORTS_IN_SECTOR ]
               </div>
             )}
-            {selectedReports.map((l) => (
+            {selectedReports.map((lap) => (
               <div
-                key={l.id}
+                key={lap.id}
                 className="p-3 rounded bg-muted/20 border-l-2"
-                style={{ borderColor: l.urgensi === "kritis" ? "var(--cyber-red)" : l.urgensi === "tinggi" ? "var(--cyber-amber)" : "var(--cyber-cyan)" }}
+                style={{
+                  borderColor:
+                    lap.urgensi === "kritis"
+                      ? "var(--cyber-red)"
+                      : lap.urgensi === "tinggi"
+                        ? "var(--cyber-amber)"
+                        : "var(--cyber-cyan)",
+                }}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-mono text-muted-foreground">
-                    {new Date(l.created_at).toLocaleString("id-ID")}
+                    {new Date(lap.created_at).toLocaleString("id-ID")}
                   </span>
-                  <Badge variant={URGENSI_VARIANT[l.urgensi as keyof typeof URGENSI_VARIANT]}>
-                    {l.urgensi === "kritis" && <AlertTriangle className="w-3 h-3" />}
-                    {l.urgensi}
+                  <Badge variant={URGENSI_VARIANT[lap.urgensi as keyof typeof URGENSI_VARIANT]}>
+                    {lap.urgensi === "kritis" && <AlertTriangle className="w-3 h-3" />}
+                    {lap.urgensi}
                   </Badge>
                 </div>
-                <div className="text-sm font-semibold">{l.judul}</div>
-                {l.wilayah && <div className="text-[11px] font-mono text-muted-foreground mt-0.5">📍 {l.wilayah}</div>}
-                {l.isi && <div className="text-xs text-muted-foreground mt-1 line-clamp-3">{l.isi}</div>}
+                <div className="text-sm font-semibold">{lap.judul}</div>
+                {lap.wilayah && (
+                  <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                    📍 {lap.wilayah}
+                  </div>
+                )}
+                {lap.isi && (
+                  <div className="text-xs text-muted-foreground mt-1 line-clamp-3">{lap.isi}</div>
+                )}
               </div>
             ))}
           </div>
