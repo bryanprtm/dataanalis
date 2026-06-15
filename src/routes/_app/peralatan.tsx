@@ -84,10 +84,44 @@ function PeralatanPage() {
     rusak_berat: data?.filter(d => d.kondisi === "rusak_berat").length ?? 0,
   };
 
+  const filtered = (data ?? []).filter(p => {
+    if (fKondisi && p.kondisi !== fKondisi) return false;
+    if (fSubden && !(p.subden ?? "").toLowerCase().includes(fSubden.toLowerCase())) return false;
+    if (q) {
+      const s = q.toLowerCase();
+      if (![p.nama, p.kategori, p.serial_number, p.lokasi, p.catatan].some(v => (v ?? "").toLowerCase().includes(s))) return false;
+    }
+    return true;
+  });
+  const headers = ["Nama", "Kategori", "Serial", "Subden", "Lokasi", "Jumlah", "Kondisi", "Catatan"];
+  const exportData = () => filtered.map(p => [
+    p.nama, p.kategori ?? "", p.serial_number ?? "", p.subden ?? "", p.lokasi ?? "",
+    p.jumlah, p.kondisi, p.catatan ?? "",
+  ]);
+
   return (
     <div>
       <PageHeader code="08" title="Peralatan & Sarpras" subtitle="Pendataan & monitoring peralatan Subden Bantis"
-        actions={<button onClick={() => { setEditingId(null); setForm(emptyForm); setShow(!show); }} className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-mono-display rounded"><Plus className="w-4 h-4" /> TAMBAH</button>} />
+        actions={<>
+          <button onClick={() => downloadCSV("peralatan-sarpras", headers, exportData())} className="inline-flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-xs font-mono-display rounded hover:border-primary"><Download className="w-4 h-4" /> CSV</button>
+          <button onClick={() => downloadPDF("Peralatan & Sarpras", headers, exportData())} className="inline-flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-xs font-mono-display rounded hover:border-primary"><FileText className="w-4 h-4" /> PDF</button>
+          <button onClick={() => { setEditingId(null); setForm(emptyForm); setShow(!show); }} className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-mono-display rounded"><Plus className="w-4 h-4" /> TAMBAH</button>
+        </>} />
+
+      <Panel title="Filter & Pencarian" className="mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Kata kunci..." className="w-full pl-9 pr-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
+          </div>
+          <input value={fSubden} onChange={e => setFSubden(e.target.value)} placeholder="Subden..." className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
+          <select value={fKondisi} onChange={e => setFKondisi(e.target.value)} className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono">
+            <option value="">Semua Kondisi</option>
+            <option value="baik">Baik</option><option value="rusak_ringan">Rusak Ringan</option><option value="rusak_berat">Rusak Berat</option>
+          </select>
+        </div>
+        <div className="mt-2 text-[10px] font-mono-display text-muted-foreground">{filtered.length} ITEM DITEMUKAN</div>
+      </Panel>
 
       <div className="grid grid-cols-4 gap-2 mb-4">
         {Object.entries(stats).map(([k, v]) => (
