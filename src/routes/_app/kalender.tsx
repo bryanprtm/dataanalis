@@ -82,10 +82,47 @@ function KalenderPage() {
   const inp = "w-full px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono";
   const lbl = "block text-[10px] font-mono-display tracking-wider text-muted-foreground mb-1";
 
+  const filtered = (items ?? []).filter(k => {
+    if (fUrg && (k.urgensi ?? "") !== fUrg) return false;
+    if (fKat && !(k.kategori ?? "").toLowerCase().includes(fKat.toLowerCase())) return false;
+    if (q) {
+      const s = q.toLowerCase();
+      if (![k.judul, k.deskripsi, k.wilayah, k.lokasi].some(v => (v ?? "").toLowerCase().includes(s))) return false;
+    }
+    return true;
+  });
+
+  const headers = ["Judul", "Kategori", "Wilayah", "Lokasi", "Mulai", "Selesai", "Urgensi", "Deskripsi"];
+  const exportData = () => filtered.map(k => [
+    k.judul, k.kategori ?? "", k.wilayah ?? "", k.lokasi ?? "",
+    new Date(k.mulai).toLocaleString("id-ID"), k.selesai ? new Date(k.selesai).toLocaleString("id-ID") : "",
+    k.urgensi ?? "", k.deskripsi ?? "",
+  ]);
+
   return (
     <div>
       <PageHeader code="06" title="Kalender Kamtibmas" subtitle="Agenda nasional, wilayah, dan event rawan kamtibmas"
-        actions={<button onClick={() => { setEditingId(null); setForm(emptyForm); setShow(!show); }} className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-mono-display rounded"><Plus className="w-4 h-4" /> TAMBAH</button>} />
+        actions={<>
+          <button onClick={() => downloadCSV("kalender-kamtibmas", headers, exportData())} className="inline-flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-xs font-mono-display rounded hover:border-primary"><Download className="w-4 h-4" /> CSV</button>
+          <button onClick={() => downloadPDF("Kalender Kamtibmas", headers, exportData())} className="inline-flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-xs font-mono-display rounded hover:border-primary"><FileText className="w-4 h-4" /> PDF</button>
+          <button onClick={() => { setEditingId(null); setForm(emptyForm); setShow(!show); }} className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-mono-display rounded"><Plus className="w-4 h-4" /> TAMBAH</button>
+        </>} />
+
+      <Panel title="Filter & Pencarian" className="mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Kata kunci..." className="w-full pl-9 pr-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
+          </div>
+          <input value={fKat} onChange={e => setFKat(e.target.value)} placeholder="Kategori..." className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
+          <select value={fUrg} onChange={e => setFUrg(e.target.value)} className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono">
+            <option value="">Semua Urgensi</option>
+            <option value="rendah">Rendah</option><option value="sedang">Sedang</option>
+            <option value="tinggi">Tinggi</option><option value="kritis">Kritis</option>
+          </select>
+        </div>
+        <div className="mt-2 text-[10px] font-mono-display text-muted-foreground">{filtered.length} AGENDA DITEMUKAN</div>
+      </Panel>
 
       {show && (
         <Panel title={editingId ? "Edit Kegiatan" : "Tambah Kegiatan"} className="mb-4">
