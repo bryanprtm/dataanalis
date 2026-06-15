@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel, Badge } from "@/components/ui-toc";
-import { Wrench, Plus, AlertCircle, Pencil, Trash2, X } from "lucide-react";
+import { Wrench, Plus, AlertCircle, Pencil, Trash2, X, Download, FileText, Search } from "lucide-react";
 import { toast } from "sonner";
+import { downloadCSV, downloadPDF } from "@/lib/export-utils";
+import { Panel as _P } from "@/components/ui-toc";
 
 export const Route = createFileRoute("/_app/peralatan")({ component: PeralatanPage });
 
