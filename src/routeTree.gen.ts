@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppUsersRouteImport } from './routes/_app/users'
 import { Route as AppToolsRouteImport } from './routes/_app/tools'
 import { Route as AppPetaRouteImport } from './routes/_app/peta'
+import { Route as AppPersonilRouteImport } from './routes/_app/personil'
 import { Route as AppPeralatanRouteImport } from './routes/_app/peralatan'
 import { Route as AppPengumumanRouteImport } from './routes/_app/pengumuman'
 import { Route as AppNotifikasiRouteImport } from './routes/_app/notifikasi'
@@ -55,6 +56,11 @@ const AppToolsRoute = AppToolsRouteImport.update({
 const AppPetaRoute = AppPetaRouteImport.update({
   id: '/peta',
   path: '/peta',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPersonilRoute = AppPersonilRouteImport.update({
+  id: '/personil',
+  path: '/personil',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPeralatanRoute = AppPeralatanRouteImport.update({
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/notifikasi': typeof AppNotifikasiRoute
   '/pengumuman': typeof AppPengumumanRoute
   '/peralatan': typeof AppPeralatanRoute
+  '/personil': typeof AppPersonilRoute
   '/peta': typeof AppPetaRoute
   '/tools': typeof AppToolsRoute
   '/users': typeof AppUsersRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/notifikasi': typeof AppNotifikasiRoute
   '/pengumuman': typeof AppPengumumanRoute
   '/peralatan': typeof AppPeralatanRoute
+  '/personil': typeof AppPersonilRoute
   '/peta': typeof AppPetaRoute
   '/tools': typeof AppToolsRoute
   '/users': typeof AppUsersRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/_app/notifikasi': typeof AppNotifikasiRoute
   '/_app/pengumuman': typeof AppPengumumanRoute
   '/_app/peralatan': typeof AppPeralatanRoute
+  '/_app/personil': typeof AppPersonilRoute
   '/_app/peta': typeof AppPetaRoute
   '/_app/tools': typeof AppToolsRoute
   '/_app/users': typeof AppUsersRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/notifikasi'
     | '/pengumuman'
     | '/peralatan'
+    | '/personil'
     | '/peta'
     | '/tools'
     | '/users'
@@ -213,6 +223,7 @@ export interface FileRouteTypes {
     | '/notifikasi'
     | '/pengumuman'
     | '/peralatan'
+    | '/personil'
     | '/peta'
     | '/tools'
     | '/users'
@@ -233,6 +244,7 @@ export interface FileRouteTypes {
     | '/_app/notifikasi'
     | '/_app/pengumuman'
     | '/_app/peralatan'
+    | '/_app/personil'
     | '/_app/peta'
     | '/_app/tools'
     | '/_app/users'
@@ -286,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/peta'
       fullPath: '/peta'
       preLoaderRoute: typeof AppPetaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/personil': {
+      id: '/_app/personil'
+      path: '/personil'
+      fullPath: '/personil'
+      preLoaderRoute: typeof AppPersonilRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/peralatan': {
@@ -388,6 +407,7 @@ interface AppRouteChildren {
   AppNotifikasiRoute: typeof AppNotifikasiRoute
   AppPengumumanRoute: typeof AppPengumumanRoute
   AppPeralatanRoute: typeof AppPeralatanRoute
+  AppPersonilRoute: typeof AppPersonilRoute
   AppPetaRoute: typeof AppPetaRoute
   AppToolsRoute: typeof AppToolsRoute
   AppUsersRoute: typeof AppUsersRoute
@@ -406,6 +426,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppNotifikasiRoute: AppNotifikasiRoute,
   AppPengumumanRoute: AppPengumumanRoute,
   AppPeralatanRoute: AppPeralatanRoute,
+  AppPersonilRoute: AppPersonilRoute,
   AppPetaRoute: AppPetaRoute,
   AppToolsRoute: AppToolsRoute,
   AppUsersRoute: AppUsersRoute,

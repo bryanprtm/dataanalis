@@ -403,6 +403,48 @@ export type Database = {
         }
         Relationships: []
       }
+      personil: {
+        Row: {
+          catatan: string | null
+          created_at: string
+          created_by: string | null
+          dsp: number
+          id: string
+          pelatihan: Json
+          polda: string | null
+          riil: number
+          satuan: string | null
+          subden: string
+          updated_at: string
+        }
+        Insert: {
+          catatan?: string | null
+          created_at?: string
+          created_by?: string | null
+          dsp?: number
+          id?: string
+          pelatihan?: Json
+          polda?: string | null
+          riil?: number
+          satuan?: string | null
+          subden: string
+          updated_at?: string
+        }
+        Update: {
+          catatan?: string | null
+          created_at?: string
+          created_by?: string | null
+          dsp?: number
+          id?: string
+          pelatihan?: Json
+          polda?: string | null
+          riil?: number
+          satuan?: string | null
+          subden?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
