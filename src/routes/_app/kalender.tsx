@@ -175,7 +175,7 @@ function KalenderPage() {
             )}
           </div>
         ))}
-        {items?.length === 0 && <div className="col-span-full text-center py-12 text-muted-foreground font-mono text-xs">[ TIDAK ADA AGENDA ]</div>}
+        {filtered.length === 0 && <div className="col-span-full text-center py-12 text-muted-foreground font-mono text-xs">[ TIDAK ADA AGENDA ]</div>}
       </div>
     </div>
   );
