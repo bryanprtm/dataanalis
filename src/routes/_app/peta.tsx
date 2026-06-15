@@ -166,7 +166,7 @@ function matchProvince(polda: string | null, province: string): boolean {
     "yogyakarta": ["di yogyakarta", "diy", "daerah istimewa yogyakarta"],
     "daerah istimewa yogyakarta": ["yogyakarta", "diy", "di yogyakarta"],
     "bangka belitung": ["babel", "kepulauan bangka belitung", "kep babel"],
-    "daerah istimewa yogyakarta": ["yogyakarta", "diy", "di yogyakarta"],
+    "papua barat": ["irian jaya barat", "papua barat daya"],
     "kepulauan bangka belitung": ["bangka belitung", "babel", "kepulauan babel", "kep babel"],
     "kepulauan riau": ["kepri", "kep riau"],
     "nusa tenggara barat": ["ntb"],
