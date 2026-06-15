@@ -23,6 +23,9 @@ function PeralatanPage() {
   const [show, setShow] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [q, setQ] = useState("");
+  const [fKondisi, setFKondisi] = useState("");
+  const [fSubden, setFSubden] = useState("");
 
   const { data } = useQuery({
     queryKey: ["peralatan"],
