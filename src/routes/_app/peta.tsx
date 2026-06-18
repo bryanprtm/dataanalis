@@ -492,6 +492,8 @@ function PetaPage() {
         </div>
       </Panel>
 
+      <AiAnalisaPeta />
+
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="max-w-2xl panel scanline border-primary/40">
           <DialogHeader>
