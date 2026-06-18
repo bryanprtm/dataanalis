@@ -48,3 +48,71 @@ export function downloadPDF(title: string, headers: string[], rows: (string | nu
 
   doc.save(`${title.replace(/\s+/g, "_")}.pdf`);
 }
+
+export function downloadSinglePDF(
+  filename: string,
+  judul: string,
+  isi: string,
+  meta: Record<string, string>
+) {
+  const doc = new jsPDF({ orientation: "portrait" });
+  doc.setFont("helvetica");
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("LAPORAN BIG DATA INFORMASI", margin, y);
+  y += 8;
+
+  doc.setFontSize(10);
+  doc.text(`Dicetak: ${new Date().toLocaleString("id-ID")}`, margin, y);
+  y += 12;
+
+  doc.setFillColor(230, 230, 230);
+  doc.rect(margin, y - 4, contentW, 7, "F");
+  doc.setFont("helvetica", "bold");
+  doc.text("JUDUL LAPORAN", margin + 2, y);
+  y += 8;
+
+  doc.setFont("helvetica", "normal");
+  const titleLines = doc.splitTextToSize(judul, contentW);
+  doc.text(titleLines, margin, y);
+  y += titleLines.length * 5 + 8;
+
+  doc.setFont("helvetica", "bold");
+  doc.text("METADATA", margin, y);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+
+  Object.entries(meta).forEach(([k, v]) => {
+    const label = `${k}:`;
+    const value = v || "-";
+    const valLines = doc.splitTextToSize(value, contentW - 40);
+    doc.setFont("helvetica", "bold");
+    doc.text(label, margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(valLines, margin + 40, y);
+    y += Math.max(5, valLines.length * 5) + 2;
+  });
+
+  y += 4;
+  doc.setFont("helvetica", "bold");
+  doc.text("ISI LAPORAN", margin, y);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+
+  const bodyLines = doc.splitTextToSize(isi, contentW);
+  bodyLines.forEach((line: string) => {
+    if (y > doc.internal.pageSize.getHeight() - 20) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.text(line, margin, y);
+    y += 5;
+  });
+
+  doc.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
+}
