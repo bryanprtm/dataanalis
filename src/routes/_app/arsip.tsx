@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
 import { PageHeader, Panel, Badge } from "@/components/ui-toc";
-import { Archive as ArchiveIcon, Search, Plus, Pencil, Trash2, X } from "lucide-react";
+import { Archive as ArchiveIcon, Search, Plus, Pencil, Trash2, X, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/arsip")({ component: ArsipPage });
