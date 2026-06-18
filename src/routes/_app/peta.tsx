@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
@@ -10,7 +11,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { MapPin, AlertTriangle } from "lucide-react";
+import { MapPin, AlertTriangle, Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { analyzePetaOperasional } from "@/lib/ai.functions";
 import mapAsset from "@/assets/indonesia-provinces.geojson.asset.json";
 
 export const Route = createFileRoute("/_app/peta")({ component: PetaPage });
