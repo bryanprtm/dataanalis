@@ -45,6 +45,7 @@ function ArsipPage() {
       const payload = {
         nomor: form.nomor || null, judul: form.judul, kategori: form.kategori as never,
         deskripsi: form.deskripsi || null, wilayah: form.wilayah || null, tanggal: form.tanggal || null,
+        file_url: form.file_url || null, file_name: form.file_name || null,
       };
       if (editingId) {
         const { error } = await supabase.from("arsip").update(payload).eq("id", editingId);
