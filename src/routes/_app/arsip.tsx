@@ -13,11 +13,11 @@ export const Route = createFileRoute("/_app/arsip")({ component: ArsipPage });
 type Row = {
   id: string; nomor: string | null; judul: string; kategori: string;
   deskripsi: string | null; wilayah: string | null; tanggal: string | null;
-  uploaded_by: string | null;
+  uploaded_by: string | null; file_url: string | null; file_name: string | null;
 };
 
 const KATEGORI = ["laporan", "surat", "dokumentasi", "intelijen", "cyber", "peralatan"] as const;
-const emptyForm = { nomor: "", judul: "", kategori: "laporan", deskripsi: "", wilayah: "", tanggal: "" };
+const emptyForm = { nomor: "", judul: "", kategori: "laporan", deskripsi: "", wilayah: "", tanggal: "", file_url: "", file_name: "" };
 
 function ArsipPage() {
   const { user } = useAuth();
