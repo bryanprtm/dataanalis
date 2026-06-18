@@ -139,6 +139,12 @@ function ArsipPage() {
             <h3 className="font-semibold text-sm mt-1 line-clamp-2">{a.judul}</h3>
             <p className="text-xs text-muted-foreground line-clamp-2 mt-1 flex-1">{a.deskripsi}</p>
             <div className="mt-2 text-[10px] font-mono text-muted-foreground">{a.wilayah ?? "—"} · {a.tanggal ?? "—"}</div>
+            {a.file_url && (
+              <button onClick={() => downloadFile(a.file_url!, a.file_name ?? "dokumen")}
+                className="mt-2 inline-flex items-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-primary/40 text-primary rounded hover:bg-primary/10 self-start">
+                <Download className="w-3 h-3" /> {a.file_name ?? "DOWNLOAD"}
+              </button>
+            )}
             {canEdit(a) && (
               <div className="mt-3 pt-2 border-t border-border/30 flex gap-1.5">
                 <button onClick={() => startEdit(a)} className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent">
