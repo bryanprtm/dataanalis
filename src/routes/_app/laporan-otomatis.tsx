@@ -83,13 +83,38 @@ function LapOtomatis() {
 
           <div className="mt-6 pt-4 border-t border-border space-y-1">
             <div className="text-[10px] font-mono-display tracking-widest text-muted-foreground mb-2">[ RIWAYAT ]</div>
-            {reports?.map(r => (
-              <button key={r.id} onClick={() => setSelected(r.id)}
-                className={`w-full text-left p-2 rounded text-xs ${selected === r.id ? "bg-primary/15 text-primary" : "hover:bg-accent/40"}`}>
-                <div className="font-medium truncate">{r.judul}</div>
-                <div className="text-[10px] text-muted-foreground font-mono">{r.periode} · {new Date(r.created_at).toLocaleDateString("id-ID")}</div>
-              </button>
-            ))}
+            {(() => {
+              const total = reports?.length ?? 0;
+              const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+              const curPage = Math.min(page, totalPages);
+              const start = (curPage - 1) * PAGE_SIZE;
+              const pageRows = reports?.slice(start, start + PAGE_SIZE) ?? [];
+              return (
+                <>
+                  {pageRows.map(r => (
+                    <button key={r.id} onClick={() => setSelected(r.id)}
+                      className={`w-full text-left p-2 rounded text-xs ${selected === r.id ? "bg-primary/15 text-primary" : "hover:bg-accent/40"}`}>
+                      <div className="font-medium truncate">{r.judul}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">{r.periode} · {new Date(r.created_at).toLocaleDateString("id-ID")}</div>
+                    </button>
+                  ))}
+                  {total > PAGE_SIZE && (
+                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-border">
+                      <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={curPage === 1}
+                        className="px-2 py-1 text-[10px] font-mono bg-secondary border border-border rounded hover:border-primary disabled:opacity-40">Prev</button>
+                      <div className="flex gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+                          <button key={n} onClick={() => setPage(n)}
+                            className={`w-6 h-6 text-[10px] font-mono rounded ${n === curPage ? "bg-primary text-primary-foreground" : "bg-secondary border border-border hover:border-primary"}`}>{n}</button>
+                        ))}
+                      </div>
+                      <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={curPage === totalPages}
+                        className="px-2 py-1 text-[10px] font-mono bg-secondary border border-border rounded hover:border-primary disabled:opacity-40">Next</button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </Panel>
 
