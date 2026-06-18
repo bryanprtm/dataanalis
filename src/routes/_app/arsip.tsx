@@ -183,7 +183,21 @@ function ArsipPage() {
                 <div><label className={lbl}>WILAYAH</label><input className={inp} value={form.wilayah} onChange={(e) => setForm({ ...form, wilayah: e.target.value })} /></div>
                 <div><label className={lbl}>TANGGAL</label><input type="date" className={inp} value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></div>
               </div>
-              <button type="submit" disabled={save.isPending} className="w-full py-2 bg-primary text-primary-foreground font-mono-display text-xs rounded disabled:opacity-50">
+              <div>
+                <label className={lbl}>DOKUMEN</label>
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border rounded text-xs font-mono-display cursor-pointer hover:bg-accent">
+                    <Upload className="w-3 h-3" />
+                    {uploading ? "MENGUPLOAD..." : form.file_name || "PILIH FILE"}
+                    <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+                  </label>
+                  {form.file_url && (
+                    <button type="button" onClick={() => setForm({ ...form, file_url: "", file_name: "" })}
+                      className="px-2 py-2 border border-border rounded"><X className="w-3 h-3" /></button>
+                  )}
+                </div>
+              </div>
+              <button type="submit" disabled={save.isPending || uploading} className="w-full py-2 bg-primary text-primary-foreground font-mono-display text-xs rounded disabled:opacity-50">
                 {save.isPending ? "[ MENYIMPAN... ]" : editingId ? "[ SIMPAN ]" : "[ TAMBAH ]"}
               </button>
             </form>
