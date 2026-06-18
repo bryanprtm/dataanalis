@@ -25,6 +25,8 @@ function BigDataPage() {
   const [urgensi, setUrgensi] = useState<string>("");
   const [polda, setPolda] = useState<string>("");
   const [editing, setEditing] = useState<Row | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 12;
 
   const { data: rows } = useQuery({
     queryKey: ["bigdata", q, jenis, urgensi, polda],
