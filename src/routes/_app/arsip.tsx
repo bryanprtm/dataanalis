@@ -77,8 +77,33 @@ function ArsipPage() {
     setForm({
       nomor: r.nomor ?? "", judul: r.judul, kategori: r.kategori,
       deskripsi: r.deskripsi ?? "", wilayah: r.wilayah ?? "", tanggal: r.tanggal ?? "",
+      file_url: r.file_url ?? "", file_name: r.file_name ?? "",
     });
     setShow(true);
+  };
+
+  const [uploading, setUploading] = useState(false);
+  const handleUpload = async (file: File) => {
+    if (!user) return;
+    setUploading(true);
+    try {
+      const path = `${user.id}/${Date.now()}_${file.name}`;
+      const { error } = await supabase.storage.from("arsip").upload(path, file);
+      if (error) throw error;
+      setForm((f) => ({ ...f, file_url: path, file_name: file.name }));
+      toast.success("Dokumen terupload");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload gagal");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const downloadFile = async (path: string, name: string) => {
+    const { data, error } = await supabase.storage.from("arsip").createSignedUrl(path, 60);
+    if (error || !data) { toast.error("Gagal download"); return; }
+    const a = document.createElement("a");
+    a.href = data.signedUrl; a.download = name; a.click();
   };
 
   const inp = "w-full px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono";
