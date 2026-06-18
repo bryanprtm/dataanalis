@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
@@ -10,7 +11,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { MapPin, AlertTriangle } from "lucide-react";
+import { MapPin, AlertTriangle, Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { analyzePetaOperasional } from "@/lib/ai.functions";
 import mapAsset from "@/assets/indonesia-provinces.geojson.asset.json";
 
 export const Route = createFileRoute("/_app/peta")({ component: PetaPage });
@@ -489,6 +492,8 @@ function PetaPage() {
         </div>
       </Panel>
 
+      <AiAnalisaPeta />
+
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="max-w-2xl panel scanline border-primary/40">
           <DialogHeader>
@@ -542,5 +547,86 @@ function PetaPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function AiAnalisaPeta() {
+  const analyze = useServerFn(analyzePetaOperasional);
+  const [result, setResult] = useState<{
+    analisis: string;
+    total: number;
+    topPolda: [string, number][];
+    perUrgensi: Record<string, number>;
+    generatedAt: string;
+  } | null>(null);
+
+  const m = useMutation({
+    mutationFn: async () => analyze(),
+    onSuccess: (data) => { setResult(data); toast.success("Analisa AI selesai"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Gagal menganalisa"),
+  });
+
+  return (
+    <Panel title="Analisa AI Peta Operasional" glow className="mt-4">
+      <div className="flex justify-end mb-3">
+        <button
+          onClick={() => m.mutate()}
+          disabled={m.isPending}
+          className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-mono-display rounded disabled:opacity-50"
+        >
+          {m.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+          {m.isPending ? "MENGANALISA..." : result ? "ANALISA ULANG" : "MULAI ANALISA"}
+        </button>
+      </div>
+      {!result && !m.isPending && (
+        <div className="text-center py-8 text-xs font-mono-display text-muted-foreground">
+          <Sparkles className="w-10 h-10 mx-auto mb-2 opacity-40" />
+          [ KLIK_MULAI_ANALISA_UNTUK_RANGKUMAN_AI ]
+          <p className="mt-2 normal-case font-sans">AI akan menganalisa sebaran laporan 30 hari terakhir secara otomatis.</p>
+        </div>
+      )}
+
+      {m.isPending && (
+        <div className="text-center py-8 text-xs font-mono-display text-primary">
+          <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin" />
+          [ MENGANALISA_DATA_PETA... ]
+        </div>
+      )}
+
+      {result && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="p-2 rounded bg-muted/30 border border-primary/20">
+              <div className="text-[10px] font-mono-display text-muted-foreground">TOTAL LAPORAN</div>
+              <div className="text-lg font-mono-display text-primary">{result.total}</div>
+            </div>
+            {Object.entries(result.perUrgensi).map(([k, v]) => (
+              <div key={k} className="p-2 rounded bg-muted/30 border border-primary/20">
+                <div className="text-[10px] font-mono-display text-muted-foreground uppercase">{k}</div>
+                <div className="text-lg font-mono-display text-primary">{v}</div>
+              </div>
+            ))}
+          </div>
+
+          {result.topPolda.length > 0 && (
+            <div>
+              <div className="text-[10px] font-mono-display text-muted-foreground mb-1">TOP WILAYAH</div>
+              <div className="flex flex-wrap gap-1">
+                {result.topPolda.map(([p, c]) => (
+                  <Badge key={p} variant="cyan">{p} · {c}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="p-3 rounded bg-muted/20 border-l-2 border-primary text-sm whitespace-pre-wrap leading-relaxed">
+            {result.analisis}
+          </div>
+          <div className="text-[10px] font-mono-display text-muted-foreground text-right">
+            Dibuat: {new Date(result.generatedAt).toLocaleString("id-ID")}
+          </div>
+        </div>
+      )}
+    </Panel>
   );
 }
