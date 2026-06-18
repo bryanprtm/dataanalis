@@ -221,3 +221,57 @@ Tulis dalam Bahasa Indonesia resmi, ringkas tapi lengkap, gunakan poin-poin bila
     if (error) throw new Error(error.message);
     return rep;
   });
+
+export const analyzePetaOperasional = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("LOVABLE_API_KEY missing");
+
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: laps } = await context.supabase
+      .from("laporan")
+      .select("polda,wilayah,urgensi,jenis,judul,created_at")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    const rows = laps ?? [];
+    const perPolda: Record<string, number> = {};
+    const perUrgensi: Record<string, number> = {};
+    const perJenis: Record<string, number> = {};
+    for (const r of rows) {
+      if (r.polda) perPolda[r.polda] = (perPolda[r.polda] ?? 0) + 1;
+      if (r.urgensi) perUrgensi[r.urgensi] = (perUrgensi[r.urgensi] ?? 0) + 1;
+      if (r.jenis) perJenis[r.jenis] = (perJenis[r.jenis] ?? 0) + 1;
+    }
+    const topPolda = Object.entries(perPolda).sort((a,b) => b[1]-a[1]).slice(0, 10);
+
+    const prompt = `Anda analis intelijen TOC Sat Bantek Polri. Analisis sebaran laporan operasional 30 hari terakhir berdasarkan peta Indonesia.
+
+TOTAL LAPORAN: ${rows.length}
+SEBARAN PER POLDA (top 10): ${JSON.stringify(topPolda)}
+DISTRIBUSI URGENSI: ${JSON.stringify(perUrgensi)}
+DISTRIBUSI JENIS: ${JSON.stringify(perJenis)}
+10 LAPORAN TERBARU: ${JSON.stringify(rows.slice(0,10).map(r => ({ judul: r.judul, polda: r.polda, urgensi: r.urgensi })))}
+
+Berikan analisis dalam Bahasa Indonesia, format markdown ringkas dengan bagian:
+**Ringkasan Situasi**, **Wilayah Rawan**, **Pola & Tren**, **Potensi Eskalasi**, **Rekomendasi Taktis**.`;
+
+    const { generateText } = await import("ai");
+    const { createLovableAi } = await import("./ai-gateway.server");
+    const ai = createLovableAi(key);
+
+    const { text } = await generateText({
+      model: ai("google/gemini-3-flash-preview"),
+      prompt,
+    });
+
+    return {
+      analisis: text,
+      total: rows.length,
+      topPolda,
+      perUrgensi,
+      generatedAt: new Date().toISOString(),
+    };
+  });
