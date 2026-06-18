@@ -83,20 +83,20 @@ function BigDataPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kata kunci..."
+            <input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Kata kunci..."
               className="w-full pl-9 pr-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono" />
           </div>
-          <select value={jenis} onChange={(e) => setJenis(e.target.value)} className="px-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono">
+          <select value={jenis} onChange={(e) => { setJenis(e.target.value); setPage(1); }} className="px-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono">
             <option value="">Semua Jenis</option>
             <option value="intelijen">Intelijen</option><option value="cyber">Cyber</option>
             <option value="kejadian">Kejadian</option><option value="kamtibmas">Kamtibmas</option>
           </select>
-          <select value={urgensi} onChange={(e) => setUrgensi(e.target.value)} className="px-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono">
+          <select value={urgensi} onChange={(e) => { setUrgensi(e.target.value); setPage(1); }} className="px-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono">
             <option value="">Semua Urgensi</option>
             <option value="rendah">Rendah</option><option value="sedang">Sedang</option>
             <option value="tinggi">Tinggi</option><option value="kritis">Kritis</option>
           </select>
-          <input value={polda} onChange={(e) => setPolda(e.target.value)} placeholder="Polda..."
+          <input value={polda} onChange={(e) => { setPolda(e.target.value); setPage(1); }} placeholder="Polda..."
             className="px-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono" />
         </div>
         <div className="mt-2 text-[10px] font-mono-display text-muted-foreground flex items-center gap-1.5">
