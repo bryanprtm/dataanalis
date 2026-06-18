@@ -14,6 +14,8 @@ export const Route = createFileRoute("/_app/laporan-otomatis")({ component: LapO
 function LapOtomatis() {
   const [periode, setPeriode] = useState<"harian"|"mingguan"|"bulanan"|"khusus">("harian");
   const [selected, setSelected] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 6;
   const qc = useQueryClient();
   const gen = useServerFn(generateAutoReport);
 
