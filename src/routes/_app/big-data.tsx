@@ -115,19 +115,37 @@ function BigDataPage() {
               <span>{r.polda ?? "—"}</span>
               <span>{new Date(r.created_at).toLocaleDateString("id-ID")}</span>
             </div>
-            {canEdit(r) && (
-              <div className="mt-2 flex gap-1.5">
-                <button onClick={() => setEditing(r)} className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent">
-                  <Pencil className="w-3 h-3" /> EDIT
-                </button>
-                <button
-                  onClick={() => { if (confirm(`Hapus "${r.judul}"?`)) del.mutate(r.id); }}
-                  className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-destructive/40 text-destructive rounded hover:bg-destructive/10"
-                >
-                  <Trash2 className="w-3 h-3" /> HAPUS
-                </button>
-              </div>
-            )}
+            <div className="mt-2 flex gap-1.5">
+              <button
+                onClick={() => downloadSinglePDF(
+                  `Laporan_${r.judul.slice(0, 40)}`,
+                  r.judul,
+                  r.isi,
+                  {
+                    Jenis: r.jenis,
+                    Urgensi: r.urgensi,
+                    Polda: r.polda ?? "—",
+                    Tanggal: new Date(r.created_at).toLocaleDateString("id-ID"),
+                  }
+                )}
+                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent"
+              >
+                <FileDown className="w-3 h-3" /> PDF
+              </button>
+              {canEdit(r) && (
+                <>
+                  <button onClick={() => setEditing(r)} className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent">
+                    <Pencil className="w-3 h-3" /> EDIT
+                  </button>
+                  <button
+                    onClick={() => { if (confirm(`Hapus "${r.judul}"?`)) del.mutate(r.id); }}
+                    className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-destructive/40 text-destructive rounded hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-3 h-3" /> HAPUS
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         ))}
         {rows?.length === 0 && (
