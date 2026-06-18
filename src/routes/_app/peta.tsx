@@ -567,11 +567,8 @@ function AiAnalisaPeta() {
   });
 
   return (
-    <Panel
-      title="Analisa AI Peta Operasional"
-      glow
-      className="mt-4"
-      actions={
+    <Panel title="Analisa AI Peta Operasional" glow className="mt-4">
+      <div className="flex justify-end mb-3">
         <button
           onClick={() => m.mutate()}
           disabled={m.isPending}
@@ -580,8 +577,7 @@ function AiAnalisaPeta() {
           {m.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           {m.isPending ? "MENGANALISA..." : result ? "ANALISA ULANG" : "MULAI ANALISA"}
         </button>
-      }
-    >
+      </div>
       {!result && !m.isPending && (
         <div className="text-center py-8 text-xs font-mono-display text-muted-foreground">
           <Sparkles className="w-10 h-10 mx-auto mb-2 opacity-40" />
