@@ -25,6 +25,8 @@ function BigDataPage() {
   const [urgensi, setUrgensi] = useState<string>("");
   const [polda, setPolda] = useState<string>("");
   const [editing, setEditing] = useState<Row | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 12;
 
   const { data: rows } = useQuery({
     queryKey: ["bigdata", q, jenis, urgensi, polda],
@@ -81,20 +83,20 @@ function BigDataPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kata kunci..."
+            <input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Kata kunci..."
               className="w-full pl-9 pr-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono" />
           </div>
-          <select value={jenis} onChange={(e) => setJenis(e.target.value)} className="px-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono">
+          <select value={jenis} onChange={(e) => { setJenis(e.target.value); setPage(1); }} className="px-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono">
             <option value="">Semua Jenis</option>
             <option value="intelijen">Intelijen</option><option value="cyber">Cyber</option>
             <option value="kejadian">Kejadian</option><option value="kamtibmas">Kamtibmas</option>
           </select>
-          <select value={urgensi} onChange={(e) => setUrgensi(e.target.value)} className="px-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono">
+          <select value={urgensi} onChange={(e) => { setUrgensi(e.target.value); setPage(1); }} className="px-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono">
             <option value="">Semua Urgensi</option>
             <option value="rendah">Rendah</option><option value="sedang">Sedang</option>
             <option value="tinggi">Tinggi</option><option value="kritis">Kritis</option>
           </select>
-          <input value={polda} onChange={(e) => setPolda(e.target.value)} placeholder="Polda..."
+          <input value={polda} onChange={(e) => { setPolda(e.target.value); setPage(1); }} placeholder="Polda..."
             className="px-3 py-2 bg-input/40 border border-border rounded-md text-sm font-mono" />
         </div>
         <div className="mt-2 text-[10px] font-mono-display text-muted-foreground flex items-center gap-1.5">
@@ -102,56 +104,100 @@ function BigDataPage() {
         </div>
       </Panel>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {rows?.map((r) => (
-          <div key={r.id} className="panel scanline p-4 flex flex-col">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <Badge variant="cyan">{r.jenis}</Badge>
-              <Badge variant={URGENSI_VARIANT[r.urgensi as keyof typeof URGENSI_VARIANT]}>{r.urgensi}</Badge>
-            </div>
-            <h3 className="font-semibold text-sm mb-1 line-clamp-2">{r.judul}</h3>
-            <p className="text-xs text-muted-foreground line-clamp-3 flex-1">{r.isi}</p>
-            <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between text-[10px] font-mono-display text-muted-foreground">
-              <span>{r.polda ?? "—"}</span>
-              <span>{new Date(r.created_at).toLocaleDateString("id-ID")}</span>
-            </div>
-            <div className="mt-2 flex gap-1.5">
-              <button
-                onClick={() => downloadSinglePDF(
-                  `Laporan_${r.judul.slice(0, 40)}`,
-                  r.judul,
-                  r.isi,
-                  {
-                    Jenis: r.jenis,
-                    Urgensi: r.urgensi,
-                    Polda: r.polda ?? "—",
-                    Tanggal: new Date(r.created_at).toLocaleDateString("id-ID"),
-                  }
-                )}
-                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent"
-              >
-                <FileDown className="w-3 h-3" /> PDF
-              </button>
-              {canEdit(r) && (
-                <>
-                  <button onClick={() => setEditing(r)} className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent">
-                    <Pencil className="w-3 h-3" /> EDIT
-                  </button>
-                  <button
-                    onClick={() => { if (confirm(`Hapus "${r.judul}"?`)) del.mutate(r.id); }}
-                    className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-destructive/40 text-destructive rounded hover:bg-destructive/10"
-                  >
-                    <Trash2 className="w-3 h-3" /> HAPUS
-                  </button>
-                </>
+      {(() => {
+        const total = rows?.length ?? 0;
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        const curPage = Math.min(page, totalPages);
+        const start = (curPage - 1) * PAGE_SIZE;
+        const pageRows = (rows ?? []).slice(start, start + PAGE_SIZE);
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {pageRows.map((r) => (
+                <div key={r.id} className="panel scanline p-4 flex flex-col">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <Badge variant="cyan">{r.jenis}</Badge>
+                    <Badge variant={URGENSI_VARIANT[r.urgensi as keyof typeof URGENSI_VARIANT]}>{r.urgensi}</Badge>
+                  </div>
+                  <h3 className="font-semibold text-sm mb-1 line-clamp-2">{r.judul}</h3>
+                  <p className="text-xs text-muted-foreground line-clamp-3 flex-1">{r.isi}</p>
+                  <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between text-[10px] font-mono-display text-muted-foreground">
+                    <span>{r.polda ?? "—"}</span>
+                    <span>{new Date(r.created_at).toLocaleDateString("id-ID")}</span>
+                  </div>
+                  <div className="mt-2 flex gap-1.5">
+                    <button
+                      onClick={() => downloadSinglePDF(
+                        `Laporan_${r.judul.slice(0, 40)}`,
+                        r.judul,
+                        r.isi,
+                        {
+                          Jenis: r.jenis,
+                          Urgensi: r.urgensi,
+                          Polda: r.polda ?? "—",
+                          Tanggal: new Date(r.created_at).toLocaleDateString("id-ID"),
+                        }
+                      )}
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent"
+                    >
+                      <FileDown className="w-3 h-3" /> PDF
+                    </button>
+                    {canEdit(r) && (
+                      <>
+                        <button onClick={() => setEditing(r)} className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent">
+                          <Pencil className="w-3 h-3" /> EDIT
+                        </button>
+                        <button
+                          onClick={() => { if (confirm(`Hapus "${r.judul}"?`)) del.mutate(r.id); }}
+                          className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-destructive/40 text-destructive rounded hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-3 h-3" /> HAPUS
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {total === 0 && (
+                <div className="col-span-full text-center py-12 text-muted-foreground font-mono text-xs">[ NO_DATA ]</div>
               )}
             </div>
-          </div>
-        ))}
-        {rows?.length === 0 && (
-          <div className="col-span-full text-center py-12 text-muted-foreground font-mono text-xs">[ NO_DATA ]</div>
-        )}
-      </div>
+
+            {total > PAGE_SIZE && (
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <div className="text-[10px] font-mono-display text-muted-foreground">
+                  HAL {curPage}/{totalPages} · MENAMPILKAN {start + 1}-{Math.min(start + PAGE_SIZE, total)} DARI {total}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={curPage === 1}
+                    className="px-3 py-1.5 text-[10px] font-mono-display border border-border rounded hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ← PREV
+                  </button>
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setPage(i + 1)}
+                      className={`w-8 h-8 text-[10px] font-mono-display border rounded ${curPage === i + 1 ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-accent"}`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={curPage === totalPages}
+                    className="px-3 py-1.5 text-[10px] font-mono-display border border-border rounded hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    NEXT →
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {editing && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
