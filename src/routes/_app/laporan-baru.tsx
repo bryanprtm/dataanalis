@@ -155,7 +155,7 @@ function LaporanBaru() {
               <label className={lbl}>TANGGAL KEJADIAN</label>
               <input type="datetime-local" value={form.tanggal_kejadian} onChange={set("tanggal_kejadian")} className={inp} />
             </div>
-            <button type="submit" disabled={busy}
+            <button type="submit" disabled={busy || uploading}
               className="w-full mt-4 inline-flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-mono-display tracking-wider text-sm rounded hover:opacity-90 disabled:opacity-50">
               <Save className="w-4 h-4" /> {busy ? "MENGIRIM..." : "KIRIM LAPORAN"}
             </button>
