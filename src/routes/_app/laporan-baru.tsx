@@ -109,8 +109,29 @@ function LaporanBaru() {
               <label className={lbl}>SUMBER</label>
               <input value={form.sumber} onChange={set("sumber")} className={inp} placeholder="Petugas / OSINT / Media..." />
             </div>
+            <div>
+              <label className={lbl}>GAMBAR PENDUKUNG ({images.length}/5)</label>
+              <div className="grid grid-cols-5 gap-2">
+                {images.map((img, i) => (
+                  <div key={i} className="relative aspect-square border border-border rounded overflow-hidden group">
+                    {img.url ? <img src={img.url} alt={img.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-muted"><ImageIcon className="w-4 h-4 text-muted-foreground" /></div>}
+                    <button type="button" onClick={() => removeImage(i)} className="absolute top-1 right-1 p-0.5 bg-destructive text-destructive-foreground rounded opacity-0 group-hover:opacity-100">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                {images.length < 5 && (
+                  <label className="aspect-square border border-dashed border-border rounded flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary text-muted-foreground text-[10px] font-mono-display">
+                    <Upload className="w-4 h-4" />
+                    {uploading ? "..." : "UPLOAD"}
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} disabled={uploading} />
+                  </label>
+                )}
+              </div>
+            </div>
           </div>
         </Panel>
+
 
         <Panel title="Lokasi & Waktu">
           <div className="space-y-3">
