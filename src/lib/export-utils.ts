@@ -1,5 +1,30 @@
 // CSV/PDF export helpers
 import jsPDF from "jspdf";
+import { supabase } from "@/integrations/supabase/client";
+
+export type LaporanAttachment = { path: string; name?: string };
+
+async function loadImageDataUrl(url: string): Promise<{ data: string; w: number; h: number; fmt: "JPEG" | "PNG" } | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const fmt: "JPEG" | "PNG" = blob.type.includes("png") ? "PNG" : "JPEG";
+    const data: string = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+    const dims: { w: number; h: number } = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve({ w: 800, h: 600 });
+      img.src = data;
+    });
+    return { data, w: dims.w, h: dims.h, fmt };
+  } catch { return null; }
+}
+
 
 function escapeCsv(v: unknown): string {
   if (v === null || v === undefined) return "";
