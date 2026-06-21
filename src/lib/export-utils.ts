@@ -4,26 +4,29 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type LaporanAttachment = { path: string; name?: string };
 
-async function loadImageDataUrl(url: string): Promise<{ data: string; w: number; h: number; fmt: "JPEG" | "PNG" } | null> {
+async function loadImageDataUrl(url: string): Promise<{ data: string; w: number; h: number; fmt: "JPEG" } | null> {
   try {
     const res = await fetch(url);
     const blob = await res.blob();
-    const fmt: "JPEG" | "PNG" = blob.type.includes("png") ? "PNG" : "JPEG";
-    const data: string = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result as string);
-      r.onerror = reject;
-      r.readAsDataURL(blob);
-    });
-    const dims: { w: number; h: number } = await new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
-      img.onerror = () => resolve({ w: 800, h: 600 });
-      img.src = data;
-    });
-    return { data, w: dims.w, h: dims.h, fmt };
+    const bitmap = await createImageBitmap(blob);
+    // Downscale to max 900px on the long edge to keep PDF small & fast
+    const MAX = 900;
+    const scale = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height));
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    const data = canvas.toDataURL("image/jpeg", 0.7);
+    return { data, w, h, fmt: "JPEG" };
   } catch { return null; }
 }
+
 
 
 function escapeCsv(v: unknown): string {
