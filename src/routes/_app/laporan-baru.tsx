@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader, Panel } from "@/components/ui-toc";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save, Upload, X, Image as ImageIcon } from "lucide-react";
 
 export const Route = createFileRoute("/_app/laporan-baru")({ component: LaporanBaru });
+
+type Img = { path: string; name: string; url: string };
 
 function LaporanBaru() {
   const { user } = useAuth();
@@ -17,15 +19,44 @@ function LaporanBaru() {
     urgensi: "sedang", tanggal_kejadian: "", sumber: "",
   });
   const [busy, setBusy] = useState(false);
+  const [images, setImages] = useState<Img[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length || !user) return;
+    const slots = 5 - images.length;
+    if (slots <= 0) { toast.error("Maksimal 5 gambar"); return; }
+    setUploading(true);
+    const next: Img[] = [];
+    for (const f of files.slice(0, slots)) {
+      if (!f.type.startsWith("image/")) { toast.error(`${f.name} bukan gambar`); continue; }
+      const path = `${user.id}/${Date.now()}_${f.name}`;
+      const { error } = await supabase.storage.from("laporan-images").upload(path, f);
+      if (error) { toast.error(error.message); continue; }
+      const { data: signed } = await supabase.storage.from("laporan-images").createSignedUrl(path, 3600);
+      next.push({ path, name: f.name, url: signed?.signedUrl ?? "" });
+    }
+    setImages([...images, ...next]);
+    setUploading(false);
+  }
+
+  async function removeImage(i: number) {
+    const img = images[i];
+    await supabase.storage.from("laporan-images").remove([img.path]);
+    setImages(images.filter((_, idx) => idx !== i));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const { data, error } = await supabase.from("laporan").insert({
+    const { error } = await supabase.from("laporan").insert({
       ...form,
       created_by: user!.id,
       status: "terkirim",
       tanggal_kejadian: form.tanggal_kejadian || null,
+      attachments: images.map(i => ({ path: i.path, name: i.name })),
     } as never).select().single();
     setBusy(false);
     if (error) { toast.error(error.message); return; }
@@ -38,6 +69,7 @@ function LaporanBaru() {
 
   const inp = "w-full px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono focus:outline-none focus:border-primary";
   const lbl = "block text-[10px] font-mono-display tracking-wider text-muted-foreground mb-1";
+
 
   return (
     <div>
