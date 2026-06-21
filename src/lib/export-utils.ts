@@ -171,8 +171,9 @@ export async function downloadSinglePDF(
   };
 
   writeSection("I", "FAKTA-FAKTA", isi);
-  writeSection("II", "ANALISA", narasi.analisa || "Berdasarkan fakta-fakta di atas, dilakukan analisa lebih lanjut terkait situasi dan dampak kejadian.");
-  writeSection("III", "CATATAN", narasi.catatan || "Perlu tindak lanjut dan pemantauan berkelanjutan terhadap kejadian ini.");
+  const resolvedNarasi: LaporanNarasi = narasi instanceof Promise ? await narasi : narasi;
+  writeSection("II", "ANALISA", resolvedNarasi.analisa || "Berdasarkan fakta-fakta di atas, dilakukan analisa lebih lanjut terkait situasi dan dampak kejadian.");
+  writeSection("III", "CATATAN", resolvedNarasi.catatan || "Perlu tindak lanjut dan pemantauan berkelanjutan terhadap kejadian ini.");
 
   // TANDA TANGAN
   ensureSpace(40);
