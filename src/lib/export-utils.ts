@@ -101,8 +101,25 @@ export async function downloadSinglePDF(
   const tanggalStr = tanggalCetak.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
   const nomor = `R/LAK/${String(tanggalCetak.getMonth() + 1).padStart(2, "0")}/${["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"][tanggalCetak.getMonth()]}/${tanggalCetak.getFullYear()}/INPULDATASUS`;
 
+  // Mulai semua I/O paralel sedini mungkin: logo, signed URLs + gambar lampiran.
+  const logoPromise = loadImageDataUrl(logoAsset.url);
+  const attachmentsPromise = (async () => {
+    if (attachments.length === 0) return [] as { data: string; w: number; h: number; fmt: "JPEG"; name: string }[];
+    const paths = attachments.map(a => a.path);
+    const { data: signedList } = await supabase.storage.from("laporan-images").createSignedUrls(paths, 3600);
+    const loaded = await Promise.all(
+      attachments.map(async (a, i) => {
+        const url = signedList?.[i]?.signedUrl;
+        if (!url) return null;
+        const img = await loadImageDataUrl(url);
+        return img ? { ...img, name: a.name ?? "" } : null;
+      })
+    );
+    return loaded.filter((x): x is { data: string; w: number; h: number; fmt: "JPEG"; name: string } => !!x);
+  })();
+
   // LOGO
-  const logo = await loadImageDataUrl(logoAsset.url);
+  const logo = await logoPromise;
   if (logo) {
     const logoH = 22;
     const logoW = logoH * (logo.w / logo.h);
