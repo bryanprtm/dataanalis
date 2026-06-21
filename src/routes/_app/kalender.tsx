@@ -243,3 +243,13 @@ function KalenderPage() {
     </div>
   );
 }
+
+function KegImg({ path, thumbs, sign }: { path: string; thumbs: Record<string, string>; sign: (p: string) => Promise<string> }) {
+  const url = thumbs[path];
+  if (!url) { void sign(path); }
+  return (
+    <div className="w-12 h-12 border border-border rounded overflow-hidden bg-muted">
+      {url && <img src={url} alt="" className="w-full h-full object-cover" />}
+    </div>
+  );
+}
