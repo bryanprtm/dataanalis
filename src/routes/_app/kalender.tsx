@@ -5,19 +5,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
 import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
-import { Calendar as CalIcon, Plus, Pencil, Trash2, X, Download, FileText, Search } from "lucide-react";
+import { Calendar as CalIcon, Plus, Pencil, Trash2, X, Download, FileText, Search, Upload, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { downloadCSV, downloadPDF } from "@/lib/export-utils";
 
 export const Route = createFileRoute("/_app/kalender")({ component: KalenderPage });
 
+type ImgRef = { path: string; name: string };
 type Item = {
   id: string; judul: string; deskripsi: string | null; lokasi: string | null; wilayah: string | null;
   mulai: string; selesai: string | null; kategori: string | null; urgensi: string | null;
-  created_by: string | null;
+  created_by: string | null; images: ImgRef[] | null;
 };
 
-const emptyForm = { judul: "", deskripsi: "", lokasi: "", wilayah: "", mulai: "", selesai: "", kategori: "", urgensi: "sedang" };
+const emptyForm = { judul: "", deskripsi: "", lokasi: "", wilayah: "", mulai: "", selesai: "", kategori: "", urgensi: "sedang", images: [] as ImgRef[] };
 
 function KalenderPage() {
   const { user } = useAuth();
@@ -44,7 +45,8 @@ function KalenderPage() {
         const { error } = await supabase.from("kegiatan").update({
           judul: form.judul, deskripsi: form.deskripsi, lokasi: form.lokasi, wilayah: form.wilayah,
           mulai: form.mulai, selesai: form.selesai || null, kategori: form.kategori, urgensi: form.urgensi as never,
-        }).eq("id", editingId);
+          images: form.images,
+        } as never).eq("id", editingId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("kegiatan").insert({ ...form, selesai: form.selesai || null, created_by: user!.id } as never);
@@ -75,9 +77,44 @@ function KalenderPage() {
       judul: k.judul, deskripsi: k.deskripsi ?? "", lokasi: k.lokasi ?? "", wilayah: k.wilayah ?? "",
       mulai: k.mulai?.slice(0, 16) ?? "", selesai: k.selesai?.slice(0, 16) ?? "",
       kategori: k.kategori ?? "", urgensi: k.urgensi ?? "sedang",
+      images: Array.isArray(k.images) ? k.images : [],
     });
     setShow(true);
   };
+
+  const [uploading, setUploading] = useState(false);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+
+  async function signThumb(path: string) {
+    if (thumbs[path]) return thumbs[path];
+    const { data } = await supabase.storage.from("laporan-images").createSignedUrl(path, 3600);
+    if (data?.signedUrl) setThumbs(t => ({ ...t, [path]: data.signedUrl }));
+    return data?.signedUrl ?? "";
+  }
+
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length || !user) return;
+    setUploading(true);
+    const next: ImgRef[] = [];
+    for (const f of files) {
+      if (!f.type.startsWith("image/")) continue;
+      const path = `${user.id}/${Date.now()}_${f.name}`;
+      const { error } = await supabase.storage.from("laporan-images").upload(path, f);
+      if (error) { toast.error(error.message); continue; }
+      next.push({ path, name: f.name });
+      await signThumb(path);
+    }
+    setForm(fm => ({ ...fm, images: [...fm.images, ...next] }));
+    setUploading(false);
+  }
+
+  async function removeFormImage(i: number) {
+    const img = form.images[i];
+    await supabase.storage.from("laporan-images").remove([img.path]);
+    setForm(fm => ({ ...fm, images: fm.images.filter((_, idx) => idx !== i) }));
+  }
 
   const inp = "w-full px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono";
   const lbl = "block text-[10px] font-mono-display tracking-wider text-muted-foreground mb-1";
@@ -139,6 +176,24 @@ function KalenderPage() {
                 <option value="rendah">Rendah</option><option value="sedang">Sedang</option><option value="tinggi">Tinggi</option><option value="kritis">Kritis</option>
               </select>
             </div>
+            <div className="md:col-span-2">
+              <label className={lbl}>GAMBAR ({form.images.length})</label>
+              <div className="grid grid-cols-6 gap-2">
+                {form.images.map((img, i) => (
+                  <div key={i} className="relative aspect-square border border-border rounded overflow-hidden group">
+                    {thumbs[img.path] ? <img src={thumbs[img.path]} alt={img.name} className="w-full h-full object-cover" onError={() => { void signThumb(img.path); }} /> : <button type="button" onClick={() => signThumb(img.path)} className="w-full h-full flex items-center justify-center bg-muted"><ImageIcon className="w-4 h-4 text-muted-foreground" /></button>}
+                    <button type="button" onClick={() => removeFormImage(i)} className="absolute top-1 right-1 p-0.5 bg-destructive text-destructive-foreground rounded opacity-0 group-hover:opacity-100">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <label className="aspect-square border border-dashed border-border rounded flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary text-muted-foreground text-[10px] font-mono-display">
+                  <Upload className="w-4 h-4" />
+                  {uploading ? "..." : "UPLOAD"}
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} disabled={uploading} />
+                </label>
+              </div>
+            </div>
           </div>
           <div className="mt-3 flex gap-2">
             <button onClick={() => save.mutate()} disabled={save.isPending || !form.judul || !form.mulai}
@@ -155,6 +210,14 @@ function KalenderPage() {
               <CalIcon className="w-4 h-4 text-primary" />
               <Badge variant={URGENSI_VARIANT[(k.urgensi ?? "sedang") as keyof typeof URGENSI_VARIANT]}>{k.urgensi ?? "sedang"}</Badge>
             </div>
+            {Array.isArray(k.images) && k.images.length > 0 && (
+              <div className="mt-2 flex gap-1 flex-wrap">
+                {k.images.slice(0, 4).map((img, i) => (
+                  <KegImg key={i} path={img.path} thumbs={thumbs} sign={signThumb} />
+                ))}
+                {k.images.length > 4 && <div className="w-12 h-12 flex items-center justify-center border border-border rounded text-[10px] font-mono">+{k.images.length - 4}</div>}
+              </div>
+            )}
             <h3 className="font-semibold text-sm mb-1">{k.judul}</h3>
             <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{k.deskripsi}</p>
             <div className="text-[10px] font-mono-display text-muted-foreground space-y-0.5">
@@ -177,6 +240,16 @@ function KalenderPage() {
         ))}
         {filtered.length === 0 && <div className="col-span-full text-center py-12 text-muted-foreground font-mono text-xs">[ TIDAK ADA AGENDA ]</div>}
       </div>
+    </div>
+  );
+}
+
+function KegImg({ path, thumbs, sign }: { path: string; thumbs: Record<string, string>; sign: (p: string) => Promise<string> }) {
+  const url = thumbs[path];
+  if (!url) { void sign(path); }
+  return (
+    <div className="w-12 h-12 border border-border rounded overflow-hidden bg-muted">
+      {url && <img src={url} alt="" className="w-full h-full object-cover" />}
     </div>
   );
 }

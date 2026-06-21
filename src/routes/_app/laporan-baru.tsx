@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader, Panel } from "@/components/ui-toc";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save, Upload, X, Image as ImageIcon } from "lucide-react";
 
 export const Route = createFileRoute("/_app/laporan-baru")({ component: LaporanBaru });
+
+type Img = { path: string; name: string; url: string };
 
 function LaporanBaru() {
   const { user } = useAuth();
@@ -17,15 +19,44 @@ function LaporanBaru() {
     urgensi: "sedang", tanggal_kejadian: "", sumber: "",
   });
   const [busy, setBusy] = useState(false);
+  const [images, setImages] = useState<Img[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length || !user) return;
+    const slots = 5 - images.length;
+    if (slots <= 0) { toast.error("Maksimal 5 gambar"); return; }
+    setUploading(true);
+    const next: Img[] = [];
+    for (const f of files.slice(0, slots)) {
+      if (!f.type.startsWith("image/")) { toast.error(`${f.name} bukan gambar`); continue; }
+      const path = `${user.id}/${Date.now()}_${f.name}`;
+      const { error } = await supabase.storage.from("laporan-images").upload(path, f);
+      if (error) { toast.error(error.message); continue; }
+      const { data: signed } = await supabase.storage.from("laporan-images").createSignedUrl(path, 3600);
+      next.push({ path, name: f.name, url: signed?.signedUrl ?? "" });
+    }
+    setImages([...images, ...next]);
+    setUploading(false);
+  }
+
+  async function removeImage(i: number) {
+    const img = images[i];
+    await supabase.storage.from("laporan-images").remove([img.path]);
+    setImages(images.filter((_, idx) => idx !== i));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const { data, error } = await supabase.from("laporan").insert({
+    const { error } = await supabase.from("laporan").insert({
       ...form,
       created_by: user!.id,
       status: "terkirim",
       tanggal_kejadian: form.tanggal_kejadian || null,
+      attachments: images.map(i => ({ path: i.path, name: i.name })),
     } as never).select().single();
     setBusy(false);
     if (error) { toast.error(error.message); return; }
@@ -38,6 +69,7 @@ function LaporanBaru() {
 
   const inp = "w-full px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono focus:outline-none focus:border-primary";
   const lbl = "block text-[10px] font-mono-display tracking-wider text-muted-foreground mb-1";
+
 
   return (
     <div>
@@ -77,8 +109,29 @@ function LaporanBaru() {
               <label className={lbl}>SUMBER</label>
               <input value={form.sumber} onChange={set("sumber")} className={inp} placeholder="Petugas / OSINT / Media..." />
             </div>
+            <div>
+              <label className={lbl}>GAMBAR PENDUKUNG ({images.length}/5)</label>
+              <div className="grid grid-cols-5 gap-2">
+                {images.map((img, i) => (
+                  <div key={i} className="relative aspect-square border border-border rounded overflow-hidden group">
+                    {img.url ? <img src={img.url} alt={img.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-muted"><ImageIcon className="w-4 h-4 text-muted-foreground" /></div>}
+                    <button type="button" onClick={() => removeImage(i)} className="absolute top-1 right-1 p-0.5 bg-destructive text-destructive-foreground rounded opacity-0 group-hover:opacity-100">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                {images.length < 5 && (
+                  <label className="aspect-square border border-dashed border-border rounded flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary text-muted-foreground text-[10px] font-mono-display">
+                    <Upload className="w-4 h-4" />
+                    {uploading ? "..." : "UPLOAD"}
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} disabled={uploading} />
+                  </label>
+                )}
+              </div>
+            </div>
           </div>
         </Panel>
+
 
         <Panel title="Lokasi & Waktu">
           <div className="space-y-3">
@@ -102,7 +155,7 @@ function LaporanBaru() {
               <label className={lbl}>TANGGAL KEJADIAN</label>
               <input type="datetime-local" value={form.tanggal_kejadian} onChange={set("tanggal_kejadian")} className={inp} />
             </div>
-            <button type="submit" disabled={busy}
+            <button type="submit" disabled={busy || uploading}
               className="w-full mt-4 inline-flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-mono-display tracking-wider text-sm rounded hover:opacity-90 disabled:opacity-50">
               <Save className="w-4 h-4" /> {busy ? "MENGIRIM..." : "KIRIM LAPORAN"}
             </button>

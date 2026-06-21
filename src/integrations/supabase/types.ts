@@ -175,6 +175,7 @@ export type Database = {
           created_by: string | null
           deskripsi: string | null
           id: string
+          images: Json | null
           judul: string
           kategori: string | null
           lokasi: string | null
@@ -190,6 +191,7 @@ export type Database = {
           created_by?: string | null
           deskripsi?: string | null
           id?: string
+          images?: Json | null
           judul: string
           kategori?: string | null
           lokasi?: string | null
@@ -205,6 +207,7 @@ export type Database = {
           created_by?: string | null
           deskripsi?: string | null
           id?: string
+          images?: Json | null
           judul?: string
           kategori?: string | null
           lokasi?: string | null
