@@ -1,5 +1,30 @@
 // CSV/PDF export helpers
 import jsPDF from "jspdf";
+import { supabase } from "@/integrations/supabase/client";
+
+export type LaporanAttachment = { path: string; name?: string };
+
+async function loadImageDataUrl(url: string): Promise<{ data: string; w: number; h: number; fmt: "JPEG" | "PNG" } | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const fmt: "JPEG" | "PNG" = blob.type.includes("png") ? "PNG" : "JPEG";
+    const data: string = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+    const dims: { w: number; h: number } = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve({ w: 800, h: 600 });
+      img.src = data;
+    });
+    return { data, w: dims.w, h: dims.h, fmt };
+  } catch { return null; }
+}
+
 
 function escapeCsv(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -49,12 +74,14 @@ export function downloadPDF(title: string, headers: string[], rows: (string | nu
   doc.save(`${title.replace(/\s+/g, "_")}.pdf`);
 }
 
-export function downloadSinglePDF(
+export async function downloadSinglePDF(
   filename: string,
   judul: string,
   isi: string,
-  meta: Record<string, string>
+  meta: Record<string, string>,
+  attachments: LaporanAttachment[] = []
 ) {
+
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   doc.setFont("times");
   const pageW = doc.internal.pageSize.getWidth();
@@ -141,5 +168,47 @@ export function downloadSinglePDF(
   doc.setFont("times", "bold");
   doc.text("Inpuldatasus", ttdX, y);
 
+  // DOKUMENTASI (gambar pendukung)
+  if (attachments.length > 0) {
+    const imgs: { data: string; w: number; h: number; fmt: "JPEG" | "PNG"; name: string }[] = [];
+    for (const a of attachments) {
+      const { data: signed } = await supabase.storage.from("laporan-images").createSignedUrl(a.path, 3600);
+      if (!signed?.signedUrl) continue;
+      const loaded = await loadImageDataUrl(signed.signedUrl);
+      if (loaded) imgs.push({ ...loaded, name: a.name ?? "" });
+    }
+    if (imgs.length > 0) {
+      doc.addPage();
+      y = margin;
+      doc.setFont("times", "bold");
+      doc.setFontSize(13);
+      doc.text("DOKUMENTASI", pageW / 2, y, { align: "center" });
+      y += 10;
+
+      const colGap = 6;
+      const cellW = (contentW - colGap) / 2;
+      const cellH = 70;
+      let col = 0;
+      for (let i = 0; i < imgs.length; i++) {
+        if (y + cellH + 8 > pageH - margin) { doc.addPage(); y = margin; col = 0; }
+        const x = margin + col * (cellW + colGap);
+        const img = imgs[i];
+        const ratio = img.w / img.h;
+        let dw = cellW, dh = cellW / ratio;
+        if (dh > cellH) { dh = cellH; dw = cellH * ratio; }
+        const offX = x + (cellW - dw) / 2;
+        const offY = y + (cellH - dh) / 2;
+        try { doc.addImage(img.data, img.fmt, offX, offY, dw, dh); } catch { /* skip */ }
+        doc.setFont("times", "italic");
+        doc.setFontSize(9);
+        const cap = `Gambar ${i + 1}${img.name ? ` — ${img.name}` : ""}`;
+        doc.text(doc.splitTextToSize(cap, cellW), x, y + cellH + 4);
+        col++;
+        if (col >= 2) { col = 0; y += cellH + 12; }
+      }
+    }
+  }
+
   doc.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
 }
+
