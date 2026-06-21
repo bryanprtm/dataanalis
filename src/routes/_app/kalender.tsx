@@ -77,9 +77,44 @@ function KalenderPage() {
       judul: k.judul, deskripsi: k.deskripsi ?? "", lokasi: k.lokasi ?? "", wilayah: k.wilayah ?? "",
       mulai: k.mulai?.slice(0, 16) ?? "", selesai: k.selesai?.slice(0, 16) ?? "",
       kategori: k.kategori ?? "", urgensi: k.urgensi ?? "sedang",
+      images: Array.isArray(k.images) ? k.images : [],
     });
     setShow(true);
   };
+
+  const [uploading, setUploading] = useState(false);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+
+  async function signThumb(path: string) {
+    if (thumbs[path]) return thumbs[path];
+    const { data } = await supabase.storage.from("laporan-images").createSignedUrl(path, 3600);
+    if (data?.signedUrl) setThumbs(t => ({ ...t, [path]: data.signedUrl }));
+    return data?.signedUrl ?? "";
+  }
+
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length || !user) return;
+    setUploading(true);
+    const next: ImgRef[] = [];
+    for (const f of files) {
+      if (!f.type.startsWith("image/")) continue;
+      const path = `${user.id}/${Date.now()}_${f.name}`;
+      const { error } = await supabase.storage.from("laporan-images").upload(path, f);
+      if (error) { toast.error(error.message); continue; }
+      next.push({ path, name: f.name });
+      await signThumb(path);
+    }
+    setForm(fm => ({ ...fm, images: [...fm.images, ...next] }));
+    setUploading(false);
+  }
+
+  async function removeFormImage(i: number) {
+    const img = form.images[i];
+    await supabase.storage.from("laporan-images").remove([img.path]);
+    setForm(fm => ({ ...fm, images: fm.images.filter((_, idx) => idx !== i) }));
+  }
 
   const inp = "w-full px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono";
   const lbl = "block text-[10px] font-mono-display tracking-wider text-muted-foreground mb-1";
