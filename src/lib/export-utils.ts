@@ -173,13 +173,21 @@ export async function downloadSinglePDF(
 
   // DOKUMENTASI (gambar pendukung)
   if (attachments.length > 0) {
-    const imgs: { data: string; w: number; h: number; fmt: "JPEG" | "PNG"; name: string }[] = [];
-    for (const a of attachments) {
-      const { data: signed } = await supabase.storage.from("laporan-images").createSignedUrl(a.path, 3600);
-      if (!signed?.signedUrl) continue;
-      const loaded = await loadImageDataUrl(signed.signedUrl);
-      if (loaded) imgs.push({ ...loaded, name: a.name ?? "" });
-    }
+    // Batch sign all URLs in one call, then fetch+decode all images in parallel
+    const paths = attachments.map(a => a.path);
+    const { data: signedList } = await supabase.storage
+      .from("laporan-images")
+      .createSignedUrls(paths, 3600);
+    const loaded = await Promise.all(
+      attachments.map(async (a, i) => {
+        const url = signedList?.[i]?.signedUrl;
+        if (!url) return null;
+        const img = await loadImageDataUrl(url);
+        return img ? { ...img, name: a.name ?? "" } : null;
+      })
+    );
+    const imgs = loaded.filter((x): x is { data: string; w: number; h: number; fmt: "JPEG"; name: string } => !!x);
+
     if (imgs.length > 0) {
       doc.addPage();
       y = margin;
