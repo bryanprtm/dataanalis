@@ -11,13 +11,14 @@ import { downloadCSV, downloadPDF } from "@/lib/export-utils";
 
 export const Route = createFileRoute("/_app/kalender")({ component: KalenderPage });
 
+type ImgRef = { path: string; name: string };
 type Item = {
   id: string; judul: string; deskripsi: string | null; lokasi: string | null; wilayah: string | null;
   mulai: string; selesai: string | null; kategori: string | null; urgensi: string | null;
-  created_by: string | null;
+  created_by: string | null; images: ImgRef[] | null;
 };
 
-const emptyForm = { judul: "", deskripsi: "", lokasi: "", wilayah: "", mulai: "", selesai: "", kategori: "", urgensi: "sedang" };
+const emptyForm = { judul: "", deskripsi: "", lokasi: "", wilayah: "", mulai: "", selesai: "", kategori: "", urgensi: "sedang", images: [] as ImgRef[] };
 
 function KalenderPage() {
   const { user } = useAuth();
