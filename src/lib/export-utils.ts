@@ -171,8 +171,8 @@ export async function downloadSinglePDF(
   };
 
   writeSection("I", "FAKTA-FAKTA", isi);
-  writeSection("II", "ANALISA", "Berdasarkan fakta-fakta di atas, dilakukan analisa lebih lanjut terkait situasi dan dampak kejadian.");
-  writeSection("III", "CATATAN", "Perlu tindak lanjut dan pemantauan berkelanjutan terhadap kejadian ini.");
+  writeSection("II", "ANALISA", narasi.analisa || "Berdasarkan fakta-fakta di atas, dilakukan analisa lebih lanjut terkait situasi dan dampak kejadian.");
+  writeSection("III", "CATATAN", narasi.catatan || "Perlu tindak lanjut dan pemantauan berkelanjutan terhadap kejadian ini.");
 
   // TANDA TANGAN
   ensureSpace(40);
