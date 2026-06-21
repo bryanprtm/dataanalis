@@ -202,52 +202,36 @@ export async function downloadSinglePDF(
   doc.setFont("times", "bold");
   doc.text("Inpuldatasus", ttdX, y);
 
-  // DOKUMENTASI (gambar pendukung)
-  if (attachments.length > 0) {
-    // Batch sign all URLs in one call, then fetch+decode all images in parallel
-    const paths = attachments.map(a => a.path);
-    const { data: signedList } = await supabase.storage
-      .from("laporan-images")
-      .createSignedUrls(paths, 3600);
-    const loaded = await Promise.all(
-      attachments.map(async (a, i) => {
-        const url = signedList?.[i]?.signedUrl;
-        if (!url) return null;
-        const img = await loadImageDataUrl(url);
-        return img ? { ...img, name: a.name ?? "" } : null;
-      })
-    );
-    const imgs = loaded.filter((x): x is { data: string; w: number; h: number; fmt: "JPEG"; name: string } => !!x);
+  // DOKUMENTASI (gambar pendukung) — sudah dimuat paralel sejak awal
+  const imgs = await attachmentsPromise;
+  if (imgs.length > 0) {
+    doc.addPage();
+    y = margin;
+    doc.setFont("times", "bold");
+    doc.setFontSize(13);
+    doc.text("DOKUMENTASI", pageW / 2, y, { align: "center" });
+    y += 10;
 
-    if (imgs.length > 0) {
-      doc.addPage();
-      y = margin;
-      doc.setFont("times", "bold");
-      doc.setFontSize(13);
-      doc.text("DOKUMENTASI", pageW / 2, y, { align: "center" });
-      y += 10;
-
-      const colGap = 6;
-      const cellW = (contentW - colGap) / 2;
-      const cellH = 70;
-      let col = 0;
-      for (let i = 0; i < imgs.length; i++) {
-        if (y + cellH + 8 > pageH - margin) { doc.addPage(); y = margin; col = 0; }
-        const x = margin + col * (cellW + colGap);
-        const img = imgs[i];
-        const ratio = img.w / img.h;
-        let dw = cellW, dh = cellW / ratio;
-        if (dh > cellH) { dh = cellH; dw = cellH * ratio; }
-        const offX = x + (cellW - dw) / 2;
-        const offY = y + (cellH - dh) / 2;
-        try { doc.addImage(img.data, img.fmt, offX, offY, dw, dh); } catch { /* skip */ }
-        doc.setFont("times", "italic");
-        doc.setFontSize(9);
-        const cap = `Gambar ${i + 1}${img.name ? ` — ${img.name}` : ""}`;
-        doc.text(doc.splitTextToSize(cap, cellW), x, y + cellH + 4);
-        col++;
-        if (col >= 2) { col = 0; y += cellH + 12; }
-      }
+    const colGap = 6;
+    const cellW = (contentW - colGap) / 2;
+    const cellH = 70;
+    let col = 0;
+    for (let i = 0; i < imgs.length; i++) {
+      if (y + cellH + 8 > pageH - margin) { doc.addPage(); y = margin; col = 0; }
+      const x = margin + col * (cellW + colGap);
+      const img = imgs[i];
+      const ratio = img.w / img.h;
+      let dw = cellW, dh = cellW / ratio;
+      if (dh > cellH) { dh = cellH; dw = cellH * ratio; }
+      const offX = x + (cellW - dw) / 2;
+      const offY = y + (cellH - dh) / 2;
+      try { doc.addImage(img.data, img.fmt, offX, offY, dw, dh); } catch { /* skip */ }
+      doc.setFont("times", "italic");
+      doc.setFontSize(9);
+      const cap = `Gambar ${i + 1}${img.name ? ` — ${img.name}` : ""}`;
+      doc.text(doc.splitTextToSize(cap, cellW), x, y + cellH + 4);
+      col++;
+      if (col >= 2) { col = 0; y += cellH + 12; }
     }
   }
 
