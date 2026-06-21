@@ -210,6 +210,14 @@ function KalenderPage() {
               <CalIcon className="w-4 h-4 text-primary" />
               <Badge variant={URGENSI_VARIANT[(k.urgensi ?? "sedang") as keyof typeof URGENSI_VARIANT]}>{k.urgensi ?? "sedang"}</Badge>
             </div>
+            {Array.isArray(k.images) && k.images.length > 0 && (
+              <div className="mt-2 flex gap-1 flex-wrap">
+                {k.images.slice(0, 4).map((img, i) => (
+                  <KegImg key={i} path={img.path} thumbs={thumbs} sign={signThumb} />
+                ))}
+                {k.images.length > 4 && <div className="w-12 h-12 flex items-center justify-center border border-border rounded text-[10px] font-mono">+{k.images.length - 4}</div>}
+              </div>
+            )}
             <h3 className="font-semibold text-sm mb-1">{k.judul}</h3>
             <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{k.deskripsi}</p>
             <div className="text-[10px] font-mono-display text-muted-foreground space-y-0.5">
