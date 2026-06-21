@@ -142,16 +142,13 @@ function BigDataPage() {
                           Tanggal: new Date(r.created_at).toLocaleDateString("id-ID"),
                         };
                         setPdfLoadingId(r.id);
-                        const t = toast.loading("Menyusun analisa & catatan AI...");
-                        let narasi: { analisa?: string; catatan?: string } = {};
-                        try {
-                          narasi = await genNarasi({ data: { judul: r.judul, isi: r.isi, meta } });
-                        } catch (e) {
-                          console.error(e);
-                          toast.error("AI gagal, gunakan teks default", { id: t });
-                        } finally {
-                          toast.dismiss(t);
-                        }
+                        const t = toast.loading("Menyiapkan laporan PDF...");
+                        // AI & PDF berjalan paralel — PDF menunggu narasi hanya saat menulis BAB II/III
+                        const narasiPromise = genNarasi({ data: { judul: r.judul, isi: r.isi, meta } })
+                          .catch((e) => {
+                            console.error(e);
+                            return {} as { analisa?: string; catatan?: string };
+                          });
                         try {
                           await downloadSinglePDF(
                             `Laporan_${r.judul.slice(0, 40)}`,
@@ -159,8 +156,12 @@ function BigDataPage() {
                             r.isi,
                             meta,
                             Array.isArray(r.attachments) ? r.attachments : [],
-                            narasi,
+                            narasiPromise,
                           );
+                          toast.success("PDF berhasil diunduh", { id: t });
+                        } catch (err) {
+                          console.error(err);
+                          toast.error("Gagal membuat PDF", { id: t });
                         } finally {
                           setPdfLoadingId(null);
                         }
