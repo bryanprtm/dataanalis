@@ -8,6 +8,8 @@ import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
 import { Search, Filter, Plus, Pencil, Trash2, X, Download, FileText, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { downloadCSV, downloadPDF, downloadSinglePDF } from "@/lib/export-utils";
+import { useServerFn } from "@tanstack/react-start";
+import { generateLaporanNarasi } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_app/big-data")({ component: BigDataPage });
 
