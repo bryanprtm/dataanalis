@@ -74,12 +74,14 @@ export function downloadPDF(title: string, headers: string[], rows: (string | nu
   doc.save(`${title.replace(/\s+/g, "_")}.pdf`);
 }
 
-export function downloadSinglePDF(
+export async function downloadSinglePDF(
   filename: string,
   judul: string,
   isi: string,
-  meta: Record<string, string>
+  meta: Record<string, string>,
+  attachments: LaporanAttachment[] = []
 ) {
+
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   doc.setFont("times");
   const pageW = doc.internal.pageSize.getWidth();
