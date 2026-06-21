@@ -55,64 +55,91 @@ export function downloadSinglePDF(
   isi: string,
   meta: Record<string, string>
 ) {
-  const doc = new jsPDF({ orientation: "portrait" });
-  doc.setFont("helvetica");
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  doc.setFont("times");
   const pageW = doc.internal.pageSize.getWidth();
-  const margin = 14;
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 20;
   const contentW = pageW - margin * 2;
   let y = margin;
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("LAPORAN BIG DATA INFORMASI", margin, y);
-  y += 8;
+  const tanggalCetak = new Date();
+  const tanggalStr = tanggalCetak.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  const nomor = `R/LAK/${String(tanggalCetak.getMonth() + 1).padStart(2, "0")}/${["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"][tanggalCetak.getMonth()]}/${tanggalCetak.getFullYear()}/INPULDATASUS`;
 
-  doc.setFontSize(10);
-  doc.text(`Dicetak: ${new Date().toLocaleString("id-ID")}`, margin, y);
-  y += 12;
+  // KOP SURAT
+  doc.setFont("times", "bold");
+  doc.setFontSize(11);
+  doc.text("SATUAN BANTUAN TEKNIS", margin, y);
+  y += 5;
+  doc.text("INPULDATASUS", margin, y);
+  y += 2;
+  doc.setLineWidth(0.6);
+  doc.line(margin, y + 1, pageW - margin, y + 1);
+  doc.setLineWidth(0.2);
+  doc.line(margin, y + 2, pageW - margin, y + 2);
+  y += 10;
 
-  doc.setFillColor(230, 230, 230);
-  doc.rect(margin, y - 4, contentW, 7, "F");
-  doc.setFont("helvetica", "bold");
-  doc.text("JUDUL LAPORAN", margin + 2, y);
-  y += 8;
-
-  doc.setFont("helvetica", "normal");
-  const titleLines = doc.splitTextToSize(judul, contentW);
-  doc.text(titleLines, margin, y);
-  y += titleLines.length * 5 + 8;
-
-  doc.setFont("helvetica", "bold");
-  doc.text("METADATA", margin, y);
+  // JUDUL
+  doc.setFont("times", "bold");
+  doc.setFontSize(13);
+  doc.text("LAPORAN ANALISA KEJADIAN", pageW / 2, y, { align: "center" });
   y += 6;
-  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text(`Nomor : ${nomor}`, pageW / 2, y, { align: "center" });
+  y += 10;
 
-  Object.entries(meta).forEach(([k, v]) => {
-    const label = `${k}:`;
+  // META
+  doc.setFontSize(11);
+  const labelX = margin;
+  const colonX = margin + 42;
+  const valueX = margin + 46;
+  const fullMeta: Record<string, string> = { Tanggal: tanggalStr, Perihal: judul, ...meta };
+  Object.entries(fullMeta).forEach(([k, v]) => {
     const value = v || "-";
-    const valLines = doc.splitTextToSize(value, contentW - 40);
-    doc.setFont("helvetica", "bold");
-    doc.text(label, margin, y);
-    doc.setFont("helvetica", "normal");
-    doc.text(valLines, margin + 40, y);
-    y += Math.max(5, valLines.length * 5) + 2;
+    const valLines = doc.splitTextToSize(value, contentW - 46);
+    doc.setFont("times", "normal");
+    doc.text(k, labelX, y);
+    doc.text(":", colonX, y);
+    doc.text(valLines, valueX, y);
+    y += Math.max(6, valLines.length * 5.2) + 1;
   });
-
-  y += 4;
-  doc.setFont("helvetica", "bold");
-  doc.text("ISI LAPORAN", margin, y);
   y += 6;
-  doc.setFont("helvetica", "normal");
 
-  const bodyLines = doc.splitTextToSize(isi, contentW);
-  bodyLines.forEach((line: string) => {
-    if (y > doc.internal.pageSize.getHeight() - 20) {
-      doc.addPage();
-      y = margin;
-    }
-    doc.text(line, margin, y);
-    y += 5;
-  });
+  // SECTIONS
+  const ensureSpace = (h: number) => {
+    if (y + h > pageH - 30) { doc.addPage(); y = margin; }
+  };
+  const writeSection = (roman: string, title: string, body: string) => {
+    ensureSpace(12);
+    doc.setFont("times", "bold");
+    doc.setFontSize(11);
+    doc.text(`${roman}.`, margin + 2, y);
+    doc.text(title, margin + 12, y);
+    y += 7;
+    doc.setFont("times", "normal");
+    const lines = doc.splitTextToSize(body, contentW - 12);
+    lines.forEach((line: string) => {
+      ensureSpace(6);
+      doc.text(line, margin + 12, y);
+      y += 5.2;
+    });
+    y += 6;
+  };
+
+  writeSection("I", "FAKTA-FAKTA", isi);
+  writeSection("II", "ANALISA", "Berdasarkan fakta-fakta di atas, dilakukan analisa lebih lanjut terkait situasi dan dampak kejadian.");
+  writeSection("III", "CATATAN", "Perlu tindak lanjut dan pemantauan berkelanjutan terhadap kejadian ini.");
+
+  // TANDA TANGAN
+  ensureSpace(40);
+  y += 4;
+  const ttdX = pageW - margin - 60;
+  doc.setFont("times", "normal");
+  doc.text(`Jakarta, ${tanggalStr}`, ttdX, y);
+  y += 20;
+  doc.setFont("times", "bold");
+  doc.text("Inpuldatasus", ttdX, y);
 
   doc.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
 }
