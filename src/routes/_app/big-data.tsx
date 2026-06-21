@@ -138,8 +138,10 @@ function BigDataPage() {
                           Urgensi: r.urgensi,
                           Polda: r.polda ?? "—",
                           Tanggal: new Date(r.created_at).toLocaleDateString("id-ID"),
-                        }
+                        },
+                        Array.isArray(r.attachments) ? r.attachments : []
                       )}
+
                       className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent"
                     >
                       <FileDown className="w-3 h-3" /> PDF
