@@ -1,8 +1,11 @@
 // CSV/PDF export helpers
 import jsPDF from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
+import logoAsset from "@/assets/logo-gegana.jpg.asset.json";
 
 export type LaporanAttachment = { path: string; name?: string };
+
+export type LaporanNarasi = { analisa?: string; catatan?: string };
 
 async function loadImageDataUrl(url: string): Promise<{ data: string; w: number; h: number; fmt: "JPEG" } | null> {
   try {
