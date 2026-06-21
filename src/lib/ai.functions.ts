@@ -275,3 +275,60 @@ Berikan analisis dalam Bahasa Indonesia, format markdown ringkas dengan bagian:
       generatedAt: new Date().toISOString(),
     };
   });
+
+const NarasiInput = z.object({
+  judul: z.string().min(1),
+  isi: z.string().min(1),
+  meta: z.record(z.string(), z.string()).optional(),
+});
+
+export const generateLaporanNarasi = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => NarasiInput.parse(d))
+  .handler(async ({ data }) => {
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("LOVABLE_API_KEY missing");
+
+    const { generateText } = await import("ai");
+    const { createLovableAi } = await import("./ai-gateway.server");
+    const ai = createLovableAi(key);
+
+    const metaStr = data.meta
+      ? Object.entries(data.meta).map(([k, v]) => `${k}: ${v}`).join("\n")
+      : "";
+
+    const prompt = `Anda adalah analis intelijen TOC Sat Bantek Polri. Berdasarkan fakta-fakta laporan berikut, susun dua bagian narasi untuk laporan resmi.
+
+JUDUL: ${data.judul}
+${metaStr}
+
+FAKTA-FAKTA:
+${data.isi}
+
+Tugas:
+1. ANALISA — analisa profesional 3-6 kalimat terkait situasi, faktor penyebab, dampak, serta potensi eskalasi/kerawanan berdasarkan fakta di atas.
+2. CATATAN — catatan tindak lanjut 2-4 kalimat berisi langkah pengawasan, koordinasi, dan rekomendasi taktis.
+
+Balas HANYA JSON valid tanpa markdown:
+{"analisa":"...","catatan":"..."}`;
+
+    let analisa = "Berdasarkan fakta-fakta di atas, dilakukan analisa lebih lanjut terkait situasi dan dampak kejadian.";
+    let catatan = "Perlu tindak lanjut dan pemantauan berkelanjutan terhadap kejadian ini.";
+    try {
+      const { text } = await generateText({
+        model: ai("google/gemini-3-flash-preview"),
+        prompt,
+      });
+      const cleaned = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+      const s = cleaned.indexOf("{");
+      const e = cleaned.lastIndexOf("}");
+      const json = s >= 0 && e > s ? cleaned.slice(s, e + 1) : cleaned;
+      const parsed = JSON.parse(json) as { analisa?: string; catatan?: string };
+      if (parsed.analisa && typeof parsed.analisa === "string") analisa = parsed.analisa.trim();
+      if (parsed.catatan && typeof parsed.catatan === "string") catatan = parsed.catatan.trim();
+    } catch (err) {
+      console.error("generateLaporanNarasi failed", err);
+    }
+
+    return { analisa, catatan };
+  });

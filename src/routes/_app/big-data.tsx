@@ -8,6 +8,8 @@ import { PageHeader, Panel, Badge, URGENSI_VARIANT } from "@/components/ui-toc";
 import { Search, Filter, Plus, Pencil, Trash2, X, Download, FileText, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { downloadCSV, downloadPDF, downloadSinglePDF } from "@/lib/export-utils";
+import { useServerFn } from "@tanstack/react-start";
+import { generateLaporanNarasi } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_app/big-data")({ component: BigDataPage });
 
@@ -28,6 +30,8 @@ function BigDataPage() {
   const [polda, setPolda] = useState<string>("");
   const [editing, setEditing] = useState<Row | null>(null);
   const [page, setPage] = useState(1);
+  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
+  const genNarasi = useServerFn(generateLaporanNarasi);
   const PAGE_SIZE = 12;
 
   const { data: rows } = useQuery({
@@ -129,22 +133,41 @@ function BigDataPage() {
                   </div>
                   <div className="mt-2 flex gap-1.5">
                     <button
-                      onClick={() => downloadSinglePDF(
-                        `Laporan_${r.judul.slice(0, 40)}`,
-                        r.judul,
-                        r.isi,
-                        {
+                      disabled={pdfLoadingId === r.id}
+                      onClick={async () => {
+                        const meta = {
                           Jenis: r.jenis,
                           Urgensi: r.urgensi,
                           Polda: r.polda ?? "—",
                           Tanggal: new Date(r.created_at).toLocaleDateString("id-ID"),
-                        },
-                        Array.isArray(r.attachments) ? r.attachments : []
-                      )}
-
-                      className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent"
+                        };
+                        setPdfLoadingId(r.id);
+                        const t = toast.loading("Menyusun analisa & catatan AI...");
+                        let narasi: { analisa?: string; catatan?: string } = {};
+                        try {
+                          narasi = await genNarasi({ data: { judul: r.judul, isi: r.isi, meta } });
+                        } catch (e) {
+                          console.error(e);
+                          toast.error("AI gagal, gunakan teks default", { id: t });
+                        } finally {
+                          toast.dismiss(t);
+                        }
+                        try {
+                          await downloadSinglePDF(
+                            `Laporan_${r.judul.slice(0, 40)}`,
+                            r.judul,
+                            r.isi,
+                            meta,
+                            Array.isArray(r.attachments) ? r.attachments : [],
+                            narasi,
+                          );
+                        } finally {
+                          setPdfLoadingId(null);
+                        }
+                      }}
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-mono-display border border-border rounded hover:bg-accent disabled:opacity-50"
                     >
-                      <FileDown className="w-3 h-3" /> PDF
+                      <FileDown className="w-3 h-3" /> {pdfLoadingId === r.id ? "..." : "PDF"}
                     </button>
                     {canEdit(r) && (
                       <>
