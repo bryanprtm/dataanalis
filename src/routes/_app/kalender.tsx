@@ -45,7 +45,8 @@ function KalenderPage() {
         const { error } = await supabase.from("kegiatan").update({
           judul: form.judul, deskripsi: form.deskripsi, lokasi: form.lokasi, wilayah: form.wilayah,
           mulai: form.mulai, selesai: form.selesai || null, kategori: form.kategori, urgensi: form.urgensi as never,
-        }).eq("id", editingId);
+          images: form.images,
+        } as never).eq("id", editingId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("kegiatan").insert({ ...form, selesai: form.selesai || null, created_by: user!.id } as never);
