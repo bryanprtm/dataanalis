@@ -14,7 +14,9 @@ export const Route = createFileRoute("/_app/big-data")({ component: BigDataPage 
 type Row = {
   id: string; judul: string; isi: string; jenis: string; urgensi: string;
   polda: string | null; created_at: string; created_by: string | null;
+  attachments: { path: string; name?: string }[] | null;
 };
+
 
 function BigDataPage() {
   const { user } = useAuth();
