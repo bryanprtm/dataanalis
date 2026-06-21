@@ -85,7 +85,8 @@ export async function downloadSinglePDF(
   judul: string,
   isi: string,
   meta: Record<string, string>,
-  attachments: LaporanAttachment[] = []
+  attachments: LaporanAttachment[] = [],
+  narasi: LaporanNarasi = {}
 ) {
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -100,12 +101,21 @@ export async function downloadSinglePDF(
   const tanggalStr = tanggalCetak.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
   const nomor = `R/LAK/${String(tanggalCetak.getMonth() + 1).padStart(2, "0")}/${["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"][tanggalCetak.getMonth()]}/${tanggalCetak.getFullYear()}/INPULDATASUS`;
 
+  // LOGO
+  const logo = await loadImageDataUrl(logoAsset.url);
+  if (logo) {
+    const logoH = 22;
+    const logoW = logoH * (logo.w / logo.h);
+    try { doc.addImage(logo.data, "JPEG", (pageW - logoW) / 2, y, logoW, logoH); } catch { /* skip */ }
+    y += logoH + 4;
+  }
+
   // KOP SURAT
   doc.setFont("times", "bold");
   doc.setFontSize(11);
-  doc.text("SATUAN BANTUAN TEKNIS", margin, y);
+  doc.text("SATUAN BANTUAN TEKNIS", pageW / 2, y, { align: "center" });
   y += 5;
-  doc.text("INPULDATASUS", margin, y);
+  doc.text("INPULDATASUS", pageW / 2, y, { align: "center" });
   y += 2;
   doc.setLineWidth(0.6);
   doc.line(margin, y + 1, pageW - margin, y + 1);
