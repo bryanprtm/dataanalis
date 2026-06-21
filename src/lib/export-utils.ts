@@ -86,7 +86,7 @@ export async function downloadSinglePDF(
   isi: string,
   meta: Record<string, string>,
   attachments: LaporanAttachment[] = [],
-  narasi: LaporanNarasi = {}
+  narasi: LaporanNarasi | Promise<LaporanNarasi> = {}
 ) {
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
