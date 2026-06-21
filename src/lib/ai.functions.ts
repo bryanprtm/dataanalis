@@ -286,44 +286,67 @@ export const generateLaporanNarasi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => NarasiInput.parse(d))
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY missing");
-
-    const { generateText } = await import("ai");
-    const { createLovableAi } = await import("./ai-gateway.server");
-    const ai = createLovableAi(key);
-
+    const openaiKey = process.env.OPENAI_API_KEY;
     const metaStr = data.meta
       ? Object.entries(data.meta).map(([k, v]) => `${k}: ${v}`).join("\n")
       : "";
 
-    const prompt = `Anda adalah analis intelijen TOC Sat Bantek Polri. Berdasarkan fakta-fakta laporan berikut, susun dua bagian narasi untuk laporan resmi.
+    const isi = (data.isi ?? "").slice(0, 2500);
+    const prompt = `Anda analis intelijen TOC Sat Bantek Polri. Berdasarkan fakta laporan, susun dua bagian narasi resmi.
 
 JUDUL: ${data.judul}
 ${metaStr}
 
 FAKTA-FAKTA:
-${data.isi}
+${isi}
 
 Tugas:
-1. ANALISA — analisa profesional 3-6 kalimat terkait situasi, faktor penyebab, dampak, serta potensi eskalasi/kerawanan berdasarkan fakta di atas.
-2. CATATAN — catatan tindak lanjut 2-4 kalimat berisi langkah pengawasan, koordinasi, dan rekomendasi taktis.
+1. ANALISA — 3-5 kalimat: situasi, faktor penyebab, dampak, potensi eskalasi.
+2. CATATAN — 2-3 kalimat: langkah pengawasan, koordinasi, rekomendasi taktis.
 
 Balas HANYA JSON valid tanpa markdown:
 {"analisa":"...","catatan":"..."}`;
 
     let analisa = "Berdasarkan fakta-fakta di atas, dilakukan analisa lebih lanjut terkait situasi dan dampak kejadian.";
     let catatan = "Perlu tindak lanjut dan pemantauan berkelanjutan terhadap kejadian ini.";
+
     try {
-      const { text } = await generateText({
-        model: ai("google/gemini-3-flash-preview"),
-        prompt,
-      });
+      let text = "";
+      if (openaiKey) {
+        const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openaiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            temperature: 0.4,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: "Anda analis intelijen Polri. Jawab ringkas, profesional, Bahasa Indonesia. Output WAJIB JSON valid." },
+              { role: "user", content: prompt },
+            ],
+          }),
+        });
+        if (!resp.ok) throw new Error(`OpenAI ${resp.status}`);
+        const json = await resp.json() as { choices?: { message?: { content?: string } }[] };
+        text = json.choices?.[0]?.message?.content ?? "";
+      } else {
+        const key = process.env.LOVABLE_API_KEY;
+        if (!key) throw new Error("No AI key configured");
+        const { generateText } = await import("ai");
+        const { createLovableAi } = await import("./ai-gateway.server");
+        const ai = createLovableAi(key);
+        const r = await generateText({ model: ai("google/gemini-3-flash-preview"), prompt });
+        text = r.text;
+      }
+
       const cleaned = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
       const s = cleaned.indexOf("{");
       const e = cleaned.lastIndexOf("}");
-      const json = s >= 0 && e > s ? cleaned.slice(s, e + 1) : cleaned;
-      const parsed = JSON.parse(json) as { analisa?: string; catatan?: string };
+      const jsonStr = s >= 0 && e > s ? cleaned.slice(s, e + 1) : cleaned;
+      const parsed = JSON.parse(jsonStr) as { analisa?: string; catatan?: string };
       if (parsed.analisa && typeof parsed.analisa === "string") analisa = parsed.analisa.trim();
       if (parsed.catatan && typeof parsed.catatan === "string") catatan = parsed.catatan.trim();
     } catch (err) {
