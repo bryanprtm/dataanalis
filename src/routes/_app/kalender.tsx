@@ -176,6 +176,24 @@ function KalenderPage() {
                 <option value="rendah">Rendah</option><option value="sedang">Sedang</option><option value="tinggi">Tinggi</option><option value="kritis">Kritis</option>
               </select>
             </div>
+            <div className="md:col-span-2">
+              <label className={lbl}>GAMBAR ({form.images.length})</label>
+              <div className="grid grid-cols-6 gap-2">
+                {form.images.map((img, i) => (
+                  <div key={i} className="relative aspect-square border border-border rounded overflow-hidden group">
+                    {thumbs[img.path] ? <img src={thumbs[img.path]} alt={img.name} className="w-full h-full object-cover" onError={() => { void signThumb(img.path); }} /> : <button type="button" onClick={() => signThumb(img.path)} className="w-full h-full flex items-center justify-center bg-muted"><ImageIcon className="w-4 h-4 text-muted-foreground" /></button>}
+                    <button type="button" onClick={() => removeFormImage(i)} className="absolute top-1 right-1 p-0.5 bg-destructive text-destructive-foreground rounded opacity-0 group-hover:opacity-100">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <label className="aspect-square border border-dashed border-border rounded flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary text-muted-foreground text-[10px] font-mono-display">
+                  <Upload className="w-4 h-4" />
+                  {uploading ? "..." : "UPLOAD"}
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} disabled={uploading} />
+                </label>
+              </div>
+            </div>
           </div>
           <div className="mt-3 flex gap-2">
             <button onClick={() => save.mutate()} disabled={save.isPending || !form.judul || !form.mulai}
