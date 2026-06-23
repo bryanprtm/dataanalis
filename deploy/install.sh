@@ -130,11 +130,13 @@ if [[ -f "$APP_DIR/package.json" ]]; then
   log "Install dependency aplikasi..."
   cd "$APP_DIR"
 
-  # PENTING: build default TanStack Start = Cloudflare Workers (tidak bisa
-  # dijalankan dengan `node`). Paksa preset Nitro ke node-server agar
-  # menghasilkan .output/server/index.mjs yang bisa di-run di VPS Ubuntu.
+  # PENTING: build default TanStack Start (via @lovable.dev/vite-tanstack-config)
+  # menggunakan preset Nitro 'cloudflare-module' yang HANYA jalan di Cloudflare
+  # Workers - tidak bisa di-run dengan `node` di VPS Ubuntu.
+  # vite.config.ts membaca env NITRO_PRESET sebagai override, jadi paksa
+  # ke 'node-server' agar menghasilkan .output/server/index.mjs yang
+  # kompatibel dengan Node.js di VPS.
   export NITRO_PRESET=node-server
-  export SERVER_PRESET=node-server
 
   if command -v bun >/dev/null 2>&1; then
     bun install
