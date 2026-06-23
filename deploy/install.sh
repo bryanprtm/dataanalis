@@ -115,6 +115,13 @@ chmod 600 "$APP_DIR/.env"
 if [[ -f "$APP_DIR/package.json" ]]; then
   log "Install dependency aplikasi..."
   cd "$APP_DIR"
+
+  # PENTING: build default TanStack Start = Cloudflare Workers (tidak bisa
+  # dijalankan dengan `node`). Paksa preset Nitro ke node-server agar
+  # menghasilkan .output/server/index.mjs yang bisa di-run di VPS Ubuntu.
+  export NITRO_PRESET=node-server
+  export SERVER_PRESET=node-server
+
   if command -v bun >/dev/null 2>&1; then
     bun install
     bun run build || warn "Build gagal - periksa script build"
@@ -123,11 +130,26 @@ if [[ -f "$APP_DIR/package.json" ]]; then
     npm run build || warn "Build gagal - periksa script build"
   fi
 
-  log "Start aplikasi via PM2..."
-  pm2 delete "$APP_NAME" 2>/dev/null || true
-  pm2 start npm --name "$APP_NAME" -- run start
-  pm2 save
-  pm2 startup systemd -u root --hp /root | tail -1 | bash || true
+  # Cari entry server hasil build
+  SERVER_ENTRY=""
+  for cand in ".output/server/index.mjs" ".output/server/index.js" "dist/server/index.mjs"; do
+    if [[ -f "$APP_DIR/$cand" ]]; then
+      SERVER_ENTRY="$APP_DIR/$cand"
+      break
+    fi
+  done
+
+  if [[ -z "$SERVER_ENTRY" ]]; then
+    warn "Server entry tidak ditemukan di .output/server/. Build mungkin gagal."
+    warn "Cek manual: ls -la $APP_DIR/.output/server/"
+  else
+    log "Start aplikasi via PM2: $SERVER_ENTRY"
+    pm2 delete "$APP_NAME" 2>/dev/null || true
+    PORT="${APP_PORT}" HOST="127.0.0.1" NODE_ENV=production \
+      pm2 start "$SERVER_ENTRY" --name "$APP_NAME" --update-env
+    pm2 save
+    pm2 startup systemd -u root --hp /root | tail -1 | bash || true
+  fi
 fi
 
 # ---- Nginx reverse proxy -----------------------------------------------------
