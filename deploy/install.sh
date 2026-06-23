@@ -103,11 +103,25 @@ else
 fi
 
 # ---- Environment -------------------------------------------------------------
+# OpenAI API key (untuk fitur AI: BAB II Analisa & BAB III Catatan)
+OPENAI_API_KEY="${OPENAI_API_KEY:-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}"
+
 log "Menulis file .env ..."
 cat > "$APP_DIR/.env" <<ENV
 NODE_ENV=production
 PORT=${APP_PORT}
+HOST=127.0.0.1
+
+# ===== Database lokal VPS (PostgreSQL) =====
 DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME}
+PGHOST=localhost
+PGPORT=5432
+PGUSER=${DB_USER}
+PGPASSWORD=${DB_PASS}
+PGDATABASE=${DB_NAME}
+
+# ===== OpenAI =====
+OPENAI_API_KEY=${OPENAI_API_KEY}
 ENV
 chmod 600 "$APP_DIR/.env"
 
