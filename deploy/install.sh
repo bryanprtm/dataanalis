@@ -159,8 +159,11 @@ if [[ -f "$APP_DIR/package.json" ]]; then
   else
     log "Start aplikasi via PM2: $SERVER_ENTRY"
     pm2 delete "$APP_NAME" 2>/dev/null || true
+    cd "$APP_DIR"
     PORT="${APP_PORT}" HOST="127.0.0.1" NODE_ENV=production \
-      pm2 start "$SERVER_ENTRY" --name "$APP_NAME" --update-env
+    DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME}" \
+    OPENAI_API_KEY="${OPENAI_API_KEY}" \
+      pm2 start "$SERVER_ENTRY" --name "$APP_NAME" --update-env --cwd "$APP_DIR"
     pm2 save
     pm2 startup systemd -u root --hp /root | tail -1 | bash || true
   fi
