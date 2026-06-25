@@ -30,6 +30,10 @@ function KalenderPage() {
   const [q, setQ] = useState("");
   const [fUrg, setFUrg] = useState("");
   const [fKat, setFKat] = useState("");
+  const [fStart, setFStart] = useState("");
+  const [fEnd, setFEnd] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 6;
 
   const { data: items } = useQuery({
     queryKey: ["kegiatan"],
@@ -122,12 +126,25 @@ function KalenderPage() {
   const filtered = (items ?? []).filter(k => {
     if (fUrg && (k.urgensi ?? "") !== fUrg) return false;
     if (fKat && !(k.kategori ?? "").toLowerCase().includes(fKat.toLowerCase())) return false;
+    if (fStart && new Date(k.mulai) < new Date(fStart)) return false;
+    if (fEnd) { const e = new Date(fEnd); e.setHours(23,59,59,999); if (new Date(k.mulai) > e) return false; }
     if (q) {
       const s = q.toLowerCase();
       if (![k.judul, k.deskripsi, k.wilayah, k.lokasi].some(v => (v ?? "").toLowerCase().includes(s))) return false;
     }
     return true;
   });
+
+  const now = new Date();
+  const upcoming = (items ?? [])
+    .filter(k => new Date(k.mulai) >= now)
+    .sort((a, b) => new Date(a.mulai).getTime() - new Date(b.mulai).getTime())
+    .slice(0, 3);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
 
   const headers = ["Judul", "Kategori", "Wilayah", "Lokasi", "Mulai", "Selesai", "Urgensi", "Deskripsi"];
   const exportData = () => filtered.map(k => [
@@ -145,21 +162,56 @@ function KalenderPage() {
           <button onClick={() => { setEditingId(null); setForm(emptyForm); setShow(!show); }} className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-mono-display rounded"><Plus className="w-4 h-4" /> TAMBAH</button>
         </>} />
 
+      {upcoming.length > 0 && (
+        <Panel title="⚡ Highlight Kegiatan Akan Datang" className="mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {upcoming.map(k => {
+              const days = Math.ceil((new Date(k.mulai).getTime() - now.getTime()) / 86400000);
+              return (
+                <div key={k.id} className="p-3 border border-primary/40 rounded bg-primary/5">
+                  <div className="flex items-center justify-between mb-1">
+                    <Badge variant={URGENSI_VARIANT[(k.urgensi ?? "sedang") as keyof typeof URGENSI_VARIANT]}>{k.urgensi ?? "sedang"}</Badge>
+                    <span className="text-[10px] font-mono-display text-primary">D-{days}</span>
+                  </div>
+                  <div className="text-sm font-semibold line-clamp-1">{k.judul}</div>
+                  <div className="text-[10px] font-mono-display text-muted-foreground mt-1">⏰ {new Date(k.mulai).toLocaleString("id-ID")}</div>
+                  <div className="text-[10px] font-mono-display text-muted-foreground">📍 {k.wilayah ?? "—"}</div>
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+      )}
+
       <Panel title="Filter & Pencarian" className="mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Kata kunci..." className="w-full pl-9 pr-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
+            <input value={q} onChange={e => { setQ(e.target.value); setPage(1); }} placeholder="Kata kunci..." className="w-full pl-9 pr-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
           </div>
-          <input value={fKat} onChange={e => setFKat(e.target.value)} placeholder="Kategori..." className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
-          <select value={fUrg} onChange={e => setFUrg(e.target.value)} className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono">
+          <input value={fKat} onChange={e => { setFKat(e.target.value); setPage(1); }} placeholder="Kategori..." className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
+          <select value={fUrg} onChange={e => { setFUrg(e.target.value); setPage(1); }} className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono">
             <option value="">Semua Urgensi</option>
             <option value="rendah">Rendah</option><option value="sedang">Sedang</option>
             <option value="tinggi">Tinggi</option><option value="kritis">Kritis</option>
           </select>
         </div>
-        <div className="mt-2 text-[10px] font-mono-display text-muted-foreground">{filtered.length} AGENDA DITEMUKAN</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+          <div>
+            <label className={lbl}>TANGGAL MULAI</label>
+            <input type="date" value={fStart} onChange={e => { setFStart(e.target.value); setPage(1); }} className="w-full px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
+          </div>
+          <div>
+            <label className={lbl}>TANGGAL AKHIR</label>
+            <input type="date" value={fEnd} onChange={e => { setFEnd(e.target.value); setPage(1); }} className="w-full px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
+          </div>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <div className="text-[10px] font-mono-display text-muted-foreground">{filtered.length} AGENDA DITEMUKAN</div>
+          {(fStart || fEnd) && <button onClick={() => { setFStart(""); setFEnd(""); setPage(1); }} className="text-[10px] font-mono-display text-primary hover:underline">RESET TANGGAL</button>}
+        </div>
       </Panel>
+
 
       {show && (
         <Panel title={editingId ? "Edit Kegiatan" : "Tambah Kegiatan"} className="mb-4">
@@ -204,7 +256,7 @@ function KalenderPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {filtered.map(k => (
+        {paged.map(k => (
           <div key={k.id} className="panel scanline p-4">
             <div className="flex items-start justify-between gap-2 mb-2">
               <CalIcon className="w-4 h-4 text-primary" />
@@ -240,7 +292,21 @@ function KalenderPage() {
         ))}
         {filtered.length === 0 && <div className="col-span-full text-center py-12 text-muted-foreground font-mono text-xs">[ TIDAK ADA AGENDA ]</div>}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-2">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            className="px-3 py-1.5 text-xs font-mono-display border border-border rounded disabled:opacity-40 hover:bg-accent">PREV</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+            <button key={n} onClick={() => setPage(n)}
+              className={`px-3 py-1.5 text-xs font-mono-display border rounded ${n === currentPage ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-accent"}`}>{n}</button>
+          ))}
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+            className="px-3 py-1.5 text-xs font-mono-display border border-border rounded disabled:opacity-40 hover:bg-accent">NEXT</button>
+        </div>
+      )}
     </div>
+
   );
 }
 
