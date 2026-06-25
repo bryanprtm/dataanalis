@@ -17,6 +17,7 @@ type Row = {
   id: string; judul: string; isi: string; jenis: string; urgensi: string;
   polda: string | null; created_at: string; created_by: string | null;
   attachments: { path: string; name?: string }[] | null;
+  sumber?: string | null; tanggal_kejadian?: string | null;
 };
 
 
