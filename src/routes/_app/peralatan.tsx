@@ -119,7 +119,7 @@ function PeralatanPage() {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Kata kunci..." className="w-full pl-9 pr-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
           </div>
-          <input value={fSubden} onChange={e => setFSubden(e.target.value)} placeholder="Subden..." className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
+          <input value={fSubden} onChange={e => { setFSubden(e.target.value); setPage(1); }} placeholder="Polda..." className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
           <select value={fKondisi} onChange={e => setFKondisi(e.target.value)} className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono">
             <option value="">Semua Kondisi</option>
             <option value="baik">Baik</option><option value="rusak_ringan">Rusak Ringan</option><option value="rusak_berat">Rusak Berat</option>
