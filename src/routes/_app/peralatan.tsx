@@ -143,7 +143,7 @@ function PeralatanPage() {
             <div><label className={lbl}>NAMA</label><input className={inp} value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} /></div>
             <div><label className={lbl}>KATEGORI</label><input className={inp} value={form.kategori} onChange={e => setForm({...form, kategori: e.target.value})} /></div>
             <div><label className={lbl}>SERIAL NUMBER</label><input className={inp} value={form.serial_number} onChange={e => setForm({...form, serial_number: e.target.value})} /></div>
-            <div><label className={lbl}>SUBDEN</label><input className={inp} value={form.subden} onChange={e => setForm({...form, subden: e.target.value})} /></div>
+            <div><label className={lbl}>POLDA</label><input className={inp} value={form.subden} onChange={e => setForm({...form, subden: e.target.value})} /></div>
             <div><label className={lbl}>LOKASI</label><input className={inp} value={form.lokasi} onChange={e => setForm({...form, lokasi: e.target.value})} /></div>
             <div><label className={lbl}>JUMLAH</label><input type="number" className={inp} value={form.jumlah} onChange={e => setForm({...form, jumlah: Number(e.target.value)})} /></div>
             <div><label className={lbl}>KONDISI</label>
