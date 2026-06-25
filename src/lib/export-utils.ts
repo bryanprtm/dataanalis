@@ -185,16 +185,15 @@ export async function downloadSinglePDF(
     const paragraphs = body.split(/\n+/);
     paragraphs.forEach((para, pIdx) => {
       const lines: string[] = doc.splitTextToSize(para, bodyW);
-      lines.forEach((line, i) => {
-        ensureSpace(6);
-        const isLast = i === lines.length - 1;
-        if (isLast) {
-          doc.text(line, margin + 12, y);
-        } else {
-          doc.text(line, margin + 12, y, { align: "justify", maxWidth: bodyW });
-        }
-        y += 5.2;
-      });
+      lines.forEach(() => ensureSpace(6));
+      // jsPDF justifies an array of lines when align:"justify" + maxWidth are set.
+      // The last line is rendered left-aligned automatically.
+      if (lines.length > 1) {
+        doc.text(lines, margin + 12, y, { align: "justify", maxWidth: bodyW });
+      } else {
+        doc.text(lines, margin + 12, y);
+      }
+      y += 5.2 * lines.length;
       if (pIdx < paragraphs.length - 1) y += 2;
     });
     y += 6;
