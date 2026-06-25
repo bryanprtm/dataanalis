@@ -95,7 +95,10 @@ function PeralatanPage() {
     }
     return true;
   });
-  const headers = ["Nama", "Kategori", "Serial", "Subden", "Lokasi", "Jumlah", "Kondisi", "Catatan"];
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const headers = ["Nama", "Kategori", "Serial", "Polda", "Lokasi", "Jumlah", "Kondisi", "Catatan"];
   const exportData = () => filtered.map(p => [
     p.nama, p.kategori ?? "", p.serial_number ?? "", p.subden ?? "", p.lokasi ?? "",
     p.jumlah, p.kondisi, p.catatan ?? "",
