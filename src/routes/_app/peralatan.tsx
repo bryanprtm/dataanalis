@@ -26,6 +26,8 @@ function PeralatanPage() {
   const [q, setQ] = useState("");
   const [fKondisi, setFKondisi] = useState("");
   const [fSubden, setFSubden] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const { data } = useQuery({
     queryKey: ["peralatan"],
@@ -93,7 +95,10 @@ function PeralatanPage() {
     }
     return true;
   });
-  const headers = ["Nama", "Kategori", "Serial", "Subden", "Lokasi", "Jumlah", "Kondisi", "Catatan"];
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const headers = ["Nama", "Kategori", "Serial", "Polda", "Lokasi", "Jumlah", "Kondisi", "Catatan"];
   const exportData = () => filtered.map(p => [
     p.nama, p.kategori ?? "", p.serial_number ?? "", p.subden ?? "", p.lokasi ?? "",
     p.jumlah, p.kondisi, p.catatan ?? "",
@@ -101,7 +106,7 @@ function PeralatanPage() {
 
   return (
     <div>
-      <PageHeader code="08" title="Peralatan & Sarpras" subtitle="Pendataan & monitoring peralatan Subden Bantis"
+      <PageHeader code="08" title="Peralatan & Sarpras" subtitle="Pendataan & monitoring peralatan Polda Bantis"
         actions={<>
           <button onClick={() => downloadCSV("peralatan-sarpras", headers, exportData())} className="inline-flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-xs font-mono-display rounded hover:border-primary"><Download className="w-4 h-4" /> CSV</button>
           <button onClick={() => downloadPDF("Peralatan & Sarpras", headers, exportData())} className="inline-flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-xs font-mono-display rounded hover:border-primary"><FileText className="w-4 h-4" /> PDF</button>
@@ -114,7 +119,7 @@ function PeralatanPage() {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Kata kunci..." className="w-full pl-9 pr-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
           </div>
-          <input value={fSubden} onChange={e => setFSubden(e.target.value)} placeholder="Subden..." className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
+          <input value={fSubden} onChange={e => { setFSubden(e.target.value); setPage(1); }} placeholder="Polda..." className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono" />
           <select value={fKondisi} onChange={e => setFKondisi(e.target.value)} className="px-3 py-2 bg-input/40 border border-border rounded text-sm font-mono">
             <option value="">Semua Kondisi</option>
             <option value="baik">Baik</option><option value="rusak_ringan">Rusak Ringan</option><option value="rusak_berat">Rusak Berat</option>
@@ -138,7 +143,7 @@ function PeralatanPage() {
             <div><label className={lbl}>NAMA</label><input className={inp} value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} /></div>
             <div><label className={lbl}>KATEGORI</label><input className={inp} value={form.kategori} onChange={e => setForm({...form, kategori: e.target.value})} /></div>
             <div><label className={lbl}>SERIAL NUMBER</label><input className={inp} value={form.serial_number} onChange={e => setForm({...form, serial_number: e.target.value})} /></div>
-            <div><label className={lbl}>SUBDEN</label><input className={inp} value={form.subden} onChange={e => setForm({...form, subden: e.target.value})} /></div>
+            <div><label className={lbl}>POLDA</label><input className={inp} value={form.subden} onChange={e => setForm({...form, subden: e.target.value})} /></div>
             <div><label className={lbl}>LOKASI</label><input className={inp} value={form.lokasi} onChange={e => setForm({...form, lokasi: e.target.value})} /></div>
             <div><label className={lbl}>JUMLAH</label><input type="number" className={inp} value={form.jumlah} onChange={e => setForm({...form, jumlah: Number(e.target.value)})} /></div>
             <div><label className={lbl}>KONDISI</label>
@@ -161,12 +166,12 @@ function PeralatanPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead><tr className="text-left text-muted-foreground font-mono-display border-b border-border">
-              <th className="py-2 pr-3">NAMA</th><th className="py-2 pr-3">KATEGORI</th><th className="py-2 pr-3">SUBDEN</th>
+              <th className="py-2 pr-3">NAMA</th><th className="py-2 pr-3">KATEGORI</th><th className="py-2 pr-3">POLDA</th>
               <th className="py-2 pr-3">JML</th><th className="py-2 pr-3">KONDISI</th><th className="py-2 pr-3">CATATAN</th>
               <th className="py-2 text-right">AKSI</th>
             </tr></thead>
             <tbody>
-              {filtered.map(p => (
+              {paged.map(p => (
                 <tr key={p.id} className="border-b border-border/30 hover:bg-accent/30">
                   <td className="py-2 pr-3 font-medium"><span className="inline-flex items-center gap-2"><Wrench className="w-3 h-3 text-primary" />{p.nama}</span></td>
                   <td className="py-2 pr-3 text-muted-foreground">{p.kategori ?? "—"}</td>
@@ -189,6 +194,15 @@ function PeralatanPage() {
             </tbody>
           </table>
         </div>
+        {filtered.length > pageSize && (
+          <div className="flex items-center justify-between mt-3 text-[10px] font-mono-display text-muted-foreground">
+            <div>Halaman {currentPage} dari {totalPages} • {filtered.length} ITEM</div>
+            <div className="flex gap-1">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-border rounded disabled:opacity-30 hover:bg-accent">PREV</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border border-border rounded disabled:opacity-30 hover:bg-accent">NEXT</button>
+            </div>
+          </div>
+        )}
       </Panel>
     </div>
   );
