@@ -181,11 +181,21 @@ export async function downloadSinglePDF(
     doc.text(title, margin + 12, y);
     y += 7;
     doc.setFont("times", "normal");
-    const lines = doc.splitTextToSize(body, contentW - 12);
-    lines.forEach((line: string) => {
-      ensureSpace(6);
-      doc.text(line, margin + 12, y);
-      y += 5.2;
+    const bodyW = contentW - 12;
+    const paragraphs = body.split(/\n+/);
+    paragraphs.forEach((para, pIdx) => {
+      const lines: string[] = doc.splitTextToSize(para, bodyW);
+      lines.forEach((line, i) => {
+        ensureSpace(6);
+        const isLast = i === lines.length - 1;
+        if (isLast) {
+          doc.text(line, margin + 12, y);
+        } else {
+          doc.text(line, margin + 12, y, { align: "justify", maxWidth: bodyW });
+        }
+        y += 5.2;
+      });
+      if (pIdx < paragraphs.length - 1) y += 2;
     });
     y += 6;
   };
