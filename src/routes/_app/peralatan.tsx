@@ -171,7 +171,7 @@ function PeralatanPage() {
               <th className="py-2 text-right">AKSI</th>
             </tr></thead>
             <tbody>
-              {filtered.map(p => (
+              {paged.map(p => (
                 <tr key={p.id} className="border-b border-border/30 hover:bg-accent/30">
                   <td className="py-2 pr-3 font-medium"><span className="inline-flex items-center gap-2"><Wrench className="w-3 h-3 text-primary" />{p.nama}</span></td>
                   <td className="py-2 pr-3 text-muted-foreground">{p.kategori ?? "—"}</td>
@@ -194,6 +194,15 @@ function PeralatanPage() {
             </tbody>
           </table>
         </div>
+        {filtered.length > pageSize && (
+          <div className="flex items-center justify-between mt-3 text-[10px] font-mono-display text-muted-foreground">
+            <div>Halaman {currentPage} dari {totalPages} • {filtered.length} ITEM</div>
+            <div className="flex gap-1">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-border rounded disabled:opacity-30 hover:bg-accent">PREV</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border border-border rounded disabled:opacity-30 hover:bg-accent">NEXT</button>
+            </div>
+          </div>
+        )}
       </Panel>
     </div>
   );
