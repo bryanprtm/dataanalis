@@ -119,7 +119,9 @@ function BigDataPage() {
         return (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {pageRows.map((r) => (
+              {pageRows.map((r, idx) => {
+                const urut = total - (start + idx);
+                return (
                 <div key={r.id} className="panel scanline p-4 flex flex-col">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <Badge variant="cyan">{r.jenis}</Badge>
