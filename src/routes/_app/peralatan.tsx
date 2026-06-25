@@ -166,7 +166,7 @@ function PeralatanPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead><tr className="text-left text-muted-foreground font-mono-display border-b border-border">
-              <th className="py-2 pr-3">NAMA</th><th className="py-2 pr-3">KATEGORI</th><th className="py-2 pr-3">SUBDEN</th>
+              <th className="py-2 pr-3">NAMA</th><th className="py-2 pr-3">KATEGORI</th><th className="py-2 pr-3">POLDA</th>
               <th className="py-2 pr-3">JML</th><th className="py-2 pr-3">KONDISI</th><th className="py-2 pr-3">CATATAN</th>
               <th className="py-2 text-right">AKSI</th>
             </tr></thead>
