@@ -256,7 +256,7 @@ function KalenderPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {filtered.map(k => (
+        {paged.map(k => (
           <div key={k.id} className="panel scanline p-4">
             <div className="flex items-start justify-between gap-2 mb-2">
               <CalIcon className="w-4 h-4 text-primary" />
@@ -292,7 +292,21 @@ function KalenderPage() {
         ))}
         {filtered.length === 0 && <div className="col-span-full text-center py-12 text-muted-foreground font-mono text-xs">[ TIDAK ADA AGENDA ]</div>}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-2">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            className="px-3 py-1.5 text-xs font-mono-display border border-border rounded disabled:opacity-40 hover:bg-accent">PREV</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+            <button key={n} onClick={() => setPage(n)}
+              className={`px-3 py-1.5 text-xs font-mono-display border rounded ${n === currentPage ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-accent"}`}>{n}</button>
+          ))}
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+            className="px-3 py-1.5 text-xs font-mono-display border border-border rounded disabled:opacity-40 hover:bg-accent">NEXT</button>
+        </div>
+      )}
     </div>
+
   );
 }
 
