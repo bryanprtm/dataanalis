@@ -126,12 +126,25 @@ function KalenderPage() {
   const filtered = (items ?? []).filter(k => {
     if (fUrg && (k.urgensi ?? "") !== fUrg) return false;
     if (fKat && !(k.kategori ?? "").toLowerCase().includes(fKat.toLowerCase())) return false;
+    if (fStart && new Date(k.mulai) < new Date(fStart)) return false;
+    if (fEnd) { const e = new Date(fEnd); e.setHours(23,59,59,999); if (new Date(k.mulai) > e) return false; }
     if (q) {
       const s = q.toLowerCase();
       if (![k.judul, k.deskripsi, k.wilayah, k.lokasi].some(v => (v ?? "").toLowerCase().includes(s))) return false;
     }
     return true;
   });
+
+  const now = new Date();
+  const upcoming = (items ?? [])
+    .filter(k => new Date(k.mulai) >= now)
+    .sort((a, b) => new Date(a.mulai).getTime() - new Date(b.mulai).getTime())
+    .slice(0, 3);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
 
   const headers = ["Judul", "Kategori", "Wilayah", "Lokasi", "Mulai", "Selesai", "Urgensi", "Deskripsi"];
   const exportData = () => filtered.map(k => [
