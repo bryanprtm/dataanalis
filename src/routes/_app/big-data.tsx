@@ -188,7 +188,8 @@ function BigDataPage() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {total === 0 && (
                 <div className="col-span-full text-center py-12 text-muted-foreground font-mono text-xs">[ NO_DATA ]</div>
               )}
