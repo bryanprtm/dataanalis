@@ -106,7 +106,7 @@ function PeralatanPage() {
 
   return (
     <div>
-      <PageHeader code="08" title="Peralatan & Sarpras" subtitle="Pendataan & monitoring peralatan Subden Bantis"
+      <PageHeader code="08" title="Peralatan & Sarpras" subtitle="Pendataan & monitoring peralatan Polda Bantis"
         actions={<>
           <button onClick={() => downloadCSV("peralatan-sarpras", headers, exportData())} className="inline-flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-xs font-mono-display rounded hover:border-primary"><Download className="w-4 h-4" /> CSV</button>
           <button onClick={() => downloadPDF("Peralatan & Sarpras", headers, exportData())} className="inline-flex items-center gap-2 px-3 py-2 bg-secondary border border-border text-xs font-mono-display rounded hover:border-primary"><FileText className="w-4 h-4" /> PDF</button>
