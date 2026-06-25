@@ -26,6 +26,8 @@ function PeralatanPage() {
   const [q, setQ] = useState("");
   const [fKondisi, setFKondisi] = useState("");
   const [fSubden, setFSubden] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const { data } = useQuery({
     queryKey: ["peralatan"],
