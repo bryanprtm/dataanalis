@@ -32,7 +32,7 @@ function BigDataPage() {
   const [page, setPage] = useState(1);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const genNarasi = useServerFn(generateLaporanNarasi);
-  const PAGE_SIZE = 12;
+  const PAGE_SIZE = 9;
 
   const { data: rows } = useQuery({
     queryKey: ["bigdata", q, jenis, urgensi, polda],
