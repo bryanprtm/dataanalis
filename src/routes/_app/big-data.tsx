@@ -119,7 +119,9 @@ function BigDataPage() {
         return (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {pageRows.map((r) => (
+              {pageRows.map((r, idx) => {
+                const urut = total - (start + idx);
+                return (
                 <div key={r.id} className="panel scanline p-4 flex flex-col">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <Badge variant="cyan">{r.jenis}</Badge>
@@ -157,6 +159,7 @@ function BigDataPage() {
                             meta,
                             Array.isArray(r.attachments) ? r.attachments : [],
                             narasiPromise,
+                            urut,
                           );
                           toast.success("PDF berhasil diunduh", { id: t });
                         } catch (err) {
@@ -185,7 +188,8 @@ function BigDataPage() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {total === 0 && (
                 <div className="col-span-full text-center py-12 text-muted-foreground font-mono text-xs">[ NO_DATA ]</div>
               )}

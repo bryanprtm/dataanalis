@@ -86,7 +86,8 @@ export async function downloadSinglePDF(
   isi: string,
   meta: Record<string, string>,
   attachments: LaporanAttachment[] = [],
-  narasi: LaporanNarasi | Promise<LaporanNarasi> = {}
+  narasi: LaporanNarasi | Promise<LaporanNarasi> = {},
+  urut: number = 1,
 ) {
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -99,7 +100,9 @@ export async function downloadSinglePDF(
 
   const tanggalCetak = new Date();
   const tanggalStr = tanggalCetak.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-  const nomor = `R/LAK/${String(tanggalCetak.getMonth() + 1).padStart(2, "0")}/${["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"][tanggalCetak.getMonth()]}/${tanggalCetak.getFullYear()}/INPULDATASUS`;
+  const romawi = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"][tanggalCetak.getMonth()];
+  const nomor = `R/LAK/${String(urut).padStart(3, "0")}/${romawi}/${tanggalCetak.getFullYear()}/INPULDATASUS`;
+
 
   // Mulai semua I/O paralel sedini mungkin: logo, signed URLs + gambar lampiran.
   const logoPromise = loadImageDataUrl(logoAsset.url);
@@ -197,7 +200,8 @@ export async function downloadSinglePDF(
   y += 4;
   const ttdX = pageW - margin - 60;
   doc.setFont("times", "normal");
-  doc.text(`Jakarta, ${tanggalStr}`, ttdX, y);
+  const lokasi = (meta.Polda && meta.Polda !== "—" ? meta.Polda : "Markas Komando");
+  doc.text(`${lokasi}, ${tanggalStr}`, ttdX, y);
   y += 20;
   doc.setFont("times", "bold");
   doc.text("Inpuldatasus", ttdX, y);
