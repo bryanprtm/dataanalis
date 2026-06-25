@@ -17,6 +17,7 @@ type Row = {
   id: string; judul: string; isi: string; jenis: string; urgensi: string;
   polda: string | null; created_at: string; created_by: string | null;
   attachments: { path: string; name?: string }[] | null;
+  sumber?: string | null; tanggal_kejadian?: string | null;
 };
 
 
@@ -137,10 +138,14 @@ function BigDataPage() {
                     <button
                       disabled={pdfLoadingId === r.id}
                       onClick={async () => {
-                        const meta = {
+                        const meta: Record<string, string> = {
                           Jenis: r.jenis,
                           Urgensi: r.urgensi,
                           Polda: r.polda ?? "—",
+                          Sumber: r.sumber ?? "—",
+                          "Tanggal Kejadian": r.tanggal_kejadian
+                            ? new Date(r.tanggal_kejadian).toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })
+                            : "—",
                           Tanggal: new Date(r.created_at).toLocaleDateString("id-ID"),
                         };
                         setPdfLoadingId(r.id);
