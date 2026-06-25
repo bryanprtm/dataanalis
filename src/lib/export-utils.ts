@@ -200,7 +200,8 @@ export async function downloadSinglePDF(
   y += 4;
   const ttdX = pageW - margin - 60;
   doc.setFont("times", "normal");
-  doc.text(`Jakarta, ${tanggalStr}`, ttdX, y);
+  const lokasi = (meta.Polda && meta.Polda !== "—" ? meta.Polda : "Markas Komando");
+  doc.text(`${lokasi}, ${tanggalStr}`, ttdX, y);
   y += 20;
   doc.setFont("times", "bold");
   doc.text("Inpuldatasus", ttdX, y);
