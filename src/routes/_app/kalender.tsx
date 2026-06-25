@@ -30,6 +30,10 @@ function KalenderPage() {
   const [q, setQ] = useState("");
   const [fUrg, setFUrg] = useState("");
   const [fKat, setFKat] = useState("");
+  const [fStart, setFStart] = useState("");
+  const [fEnd, setFEnd] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 6;
 
   const { data: items } = useQuery({
     queryKey: ["kegiatan"],
