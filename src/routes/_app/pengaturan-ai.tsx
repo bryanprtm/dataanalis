@@ -119,7 +119,7 @@ function PengaturanAiPage() {
         ) : null}
       </Panel>
 
-      <Panel title="Konfigurasi" icon={Brain}>
+      <Panel title="Konfigurasi Provider & Token">
         <div className="space-y-4 max-w-2xl">
           <div>
             <Label className="text-xs font-mono-display">PROVIDER AI</Label>
