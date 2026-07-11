@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard, Database, Brain, FileInput, FileText, Calendar, Archive,
   Wrench, Megaphone, Map, Users, MessageSquare, Bell, ExternalLink, Shield,
-  UserCheck, LogOut, Menu, X,
+  UserCheck, Cpu, LogOut, Menu, X,
 } from "lucide-react";
 import sbtLogo from "@/assets/sbt-logo.jpeg.asset.json";
 
@@ -25,6 +25,7 @@ const NAV = [
   { to: "/tools", label: "Link Tools TOC", icon: ExternalLink, code: "14" },
   { to: "/keamanan", label: "Keamanan Sistem", icon: Shield, code: "15" },
   { to: "/personil", label: "Data Personil", icon: UserCheck, code: "16" },
+  { to: "/pengaturan-ai", label: "Pengaturan AI", icon: Cpu, code: "17" },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {

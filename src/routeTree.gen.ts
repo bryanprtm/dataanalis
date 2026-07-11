@@ -19,6 +19,7 @@ import { Route as AppPetaRouteImport } from './routes/_app/peta'
 import { Route as AppPersonilRouteImport } from './routes/_app/personil'
 import { Route as AppPeralatanRouteImport } from './routes/_app/peralatan'
 import { Route as AppPengumumanRouteImport } from './routes/_app/pengumuman'
+import { Route as AppPengaturanAiRouteImport } from './routes/_app/pengaturan-ai'
 import { Route as AppNotifikasiRouteImport } from './routes/_app/notifikasi'
 import { Route as AppLaporanOtomatisRouteImport } from './routes/_app/laporan-otomatis'
 import { Route as AppLaporanBaruRouteImport } from './routes/_app/laporan-baru'
@@ -77,6 +78,11 @@ const AppPeralatanRoute = AppPeralatanRouteImport.update({
 const AppPengumumanRoute = AppPengumumanRouteImport.update({
   id: '/pengumuman',
   path: '/pengumuman',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPengaturanAiRoute = AppPengaturanAiRouteImport.update({
+  id: '/pengaturan-ai',
+  path: '/pengaturan-ai',
   getParentRoute: () => AppRoute,
 } as any)
 const AppNotifikasiRoute = AppNotifikasiRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/laporan-baru': typeof AppLaporanBaruRoute
   '/laporan-otomatis': typeof AppLaporanOtomatisRoute
   '/notifikasi': typeof AppNotifikasiRoute
+  '/pengaturan-ai': typeof AppPengaturanAiRoute
   '/pengumuman': typeof AppPengumumanRoute
   '/peralatan': typeof AppPeralatanRoute
   '/personil': typeof AppPersonilRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/laporan-baru': typeof AppLaporanBaruRoute
   '/laporan-otomatis': typeof AppLaporanOtomatisRoute
   '/notifikasi': typeof AppNotifikasiRoute
+  '/pengaturan-ai': typeof AppPengaturanAiRoute
   '/pengumuman': typeof AppPengumumanRoute
   '/peralatan': typeof AppPeralatanRoute
   '/personil': typeof AppPersonilRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/_app/laporan-baru': typeof AppLaporanBaruRoute
   '/_app/laporan-otomatis': typeof AppLaporanOtomatisRoute
   '/_app/notifikasi': typeof AppNotifikasiRoute
+  '/_app/pengaturan-ai': typeof AppPengaturanAiRoute
   '/_app/pengumuman': typeof AppPengumumanRoute
   '/_app/peralatan': typeof AppPeralatanRoute
   '/_app/personil': typeof AppPersonilRoute
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/laporan-baru'
     | '/laporan-otomatis'
     | '/notifikasi'
+    | '/pengaturan-ai'
     | '/pengumuman'
     | '/peralatan'
     | '/personil'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/laporan-baru'
     | '/laporan-otomatis'
     | '/notifikasi'
+    | '/pengaturan-ai'
     | '/pengumuman'
     | '/peralatan'
     | '/personil'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/_app/laporan-baru'
     | '/_app/laporan-otomatis'
     | '/_app/notifikasi'
+    | '/_app/pengaturan-ai'
     | '/_app/pengumuman'
     | '/_app/peralatan'
     | '/_app/personil'
@@ -341,6 +353,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPengumumanRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/pengaturan-ai': {
+      id: '/_app/pengaturan-ai'
+      path: '/pengaturan-ai'
+      fullPath: '/pengaturan-ai'
+      preLoaderRoute: typeof AppPengaturanAiRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/notifikasi': {
       id: '/_app/notifikasi'
       path: '/notifikasi'
@@ -425,6 +444,7 @@ interface AppRouteChildren {
   AppLaporanBaruRoute: typeof AppLaporanBaruRoute
   AppLaporanOtomatisRoute: typeof AppLaporanOtomatisRoute
   AppNotifikasiRoute: typeof AppNotifikasiRoute
+  AppPengaturanAiRoute: typeof AppPengaturanAiRoute
   AppPengumumanRoute: typeof AppPengumumanRoute
   AppPeralatanRoute: typeof AppPeralatanRoute
   AppPersonilRoute: typeof AppPersonilRoute
@@ -444,6 +464,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLaporanBaruRoute: AppLaporanBaruRoute,
   AppLaporanOtomatisRoute: AppLaporanOtomatisRoute,
   AppNotifikasiRoute: AppNotifikasiRoute,
+  AppPengaturanAiRoute: AppPengaturanAiRoute,
   AppPengumumanRoute: AppPengumumanRoute,
   AppPeralatanRoute: AppPeralatanRoute,
   AppPersonilRoute: AppPersonilRoute,

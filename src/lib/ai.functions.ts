@@ -2,6 +2,136 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+// ============================================================
+// AI provider config (OpenAI vs Lovable AI Gateway)
+// Super admin dapat menyimpan OPENAI_API_KEY & provider pilihan
+// di tabel app_settings. Bila tidak ada, fallback ke env / Lovable.
+// ============================================================
+
+type AiConfig = {
+  provider: "auto" | "openai" | "lovable";
+  openaiKey: string | null;
+  openaiModel: string;
+  lovableKey: string | null;
+};
+
+async function loadAiConfig(): Promise<AiConfig> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("app_settings")
+    .select("key,value")
+    .in("key", ["ai_provider", "openai_api_key", "openai_model"]);
+  const map = new Map((data ?? []).map((r) => [r.key, r.value ?? ""]));
+  const provider = (map.get("ai_provider") || "auto") as AiConfig["provider"];
+  const dbOpenai = map.get("openai_api_key") || "";
+  return {
+    provider,
+    openaiKey: dbOpenai || process.env.OPENAI_API_KEY || null,
+    openaiModel: map.get("openai_model") || "gpt-4o-mini",
+    lovableKey: process.env.LOVABLE_API_KEY || null,
+  };
+}
+
+async function chatComplete(
+  cfg: AiConfig,
+  messages: { role: "system" | "user" | "assistant"; content: string }[],
+  opts: { json?: boolean } = {},
+): Promise<string> {
+  const tryOpenAI = async () => {
+    if (!cfg.openaiKey) throw new Error("OPENAI_API_KEY tidak dikonfigurasi");
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.openaiKey}` },
+      body: JSON.stringify({
+        model: cfg.openaiModel,
+        temperature: 0.4,
+        ...(opts.json ? { response_format: { type: "json_object" } } : {}),
+        messages,
+      }),
+    });
+    if (!resp.ok) throw new Error(`OpenAI ${resp.status}`);
+    const j = await resp.json() as { choices?: { message?: { content?: string } }[] };
+    return j.choices?.[0]?.message?.content ?? "";
+  };
+  const tryLovable = async () => {
+    if (!cfg.lovableKey) throw new Error("LOVABLE_API_KEY tidak tersedia");
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.lovableKey}` },
+      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages }),
+    });
+    if (!resp.ok) throw new Error(`Lovable AI ${resp.status}`);
+    const j = await resp.json() as { choices?: { message?: { content?: string } }[] };
+    return j.choices?.[0]?.message?.content ?? "";
+  };
+
+  if (cfg.provider === "openai") return tryOpenAI();
+  if (cfg.provider === "lovable") return tryLovable();
+  if (cfg.openaiKey) {
+    try { return await tryOpenAI(); } catch (e) {
+      console.warn("OpenAI gagal, fallback Lovable AI", e);
+      return tryLovable();
+    }
+  }
+  return tryLovable();
+}
+
+async function assertSuperAdmin(context: { supabase: any; userId: string }) {
+  const { data, error } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId, _role: "super_admin",
+  });
+  if (error || !data) throw new Error("Forbidden: hanya super_admin");
+}
+
+export const getAiSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertSuperAdmin(context);
+    const cfg = await loadAiConfig();
+    return {
+      provider: cfg.provider,
+      openaiModel: cfg.openaiModel,
+      hasOpenaiKey: !!cfg.openaiKey,
+      openaiKeyMasked: cfg.openaiKey ? `${cfg.openaiKey.slice(0, 7)}…${cfg.openaiKey.slice(-4)}` : null,
+      openaiKeySource: cfg.openaiKey
+        ? (process.env.OPENAI_API_KEY && cfg.openaiKey === process.env.OPENAI_API_KEY ? "env" : "database")
+        : null,
+      hasLovableKey: !!cfg.lovableKey,
+    };
+  });
+
+const SaveAiInput = z.object({
+  provider: z.enum(["auto", "openai", "lovable"]),
+  openaiApiKey: z.string().optional(),
+  openaiModel: z.string().optional(),
+  clearOpenaiKey: z.boolean().optional(),
+});
+
+export const saveAiSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => SaveAiInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const now = new Date().toISOString();
+    const rows: { key: string; value: string | null; updated_by: string; updated_at: string }[] = [
+      { key: "ai_provider", value: data.provider, updated_by: context.userId, updated_at: now },
+    ];
+    if (data.openaiModel !== undefined) {
+      rows.push({ key: "openai_model", value: data.openaiModel || "gpt-4o-mini", updated_by: context.userId, updated_at: now });
+    }
+    if (data.clearOpenaiKey) {
+      rows.push({ key: "openai_api_key", value: null, updated_by: context.userId, updated_at: now });
+    } else if (data.openaiApiKey && data.openaiApiKey.trim()) {
+      rows.push({ key: "openai_api_key", value: data.openaiApiKey.trim(), updated_by: context.userId, updated_at: now });
+    }
+    const { error } = await supabaseAdmin.from("app_settings").upsert(rows, { onConflict: "key" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
+
 const AnalyzeInput = z.object({ laporanId: z.string().uuid() });
 
 const AnalysisSchema = z.object({
@@ -286,8 +416,7 @@ export const generateLaporanNarasi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => NarasiInput.parse(d))
   .handler(async ({ data }) => {
-    const lovableKey = process.env.LOVABLE_API_KEY;
-    const openaiKey = process.env.OPENAI_API_KEY;
+    const cfg = await loadAiConfig();
     const metaStr = data.meta
       ? Object.entries(data.meta).map(([k, v]) => `${k}: ${v}`).join("\n")
       : "";
@@ -311,59 +440,11 @@ Balas HANYA JSON valid tanpa markdown:
     let analisa = "Berdasarkan fakta-fakta di atas, dilakukan analisa lebih lanjut terkait situasi dan dampak kejadian.";
     let catatan = "Perlu tindak lanjut dan pemantauan berkelanjutan terhadap kejadian ini.";
 
-    const callLovable = async () => {
-      if (!lovableKey) throw new Error("No LOVABLE_API_KEY");
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${lovableKey}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            { role: "system", content: "Anda analis intelijen Polri. Jawab ringkas, profesional, Bahasa Indonesia. Output WAJIB JSON valid tanpa markdown." },
-            { role: "user", content: prompt },
-          ],
-        }),
-      });
-      if (!resp.ok) throw new Error(`Lovable AI ${resp.status}`);
-      const json = await resp.json() as { choices?: { message?: { content?: string } }[] };
-      return json.choices?.[0]?.message?.content ?? "";
-    };
-
-    const callOpenAI = async () => {
-      if (!openaiKey) throw new Error("No OPENAI_API_KEY");
-      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openaiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          temperature: 0.4,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: "Anda analis intelijen Polri. Jawab ringkas, profesional, Bahasa Indonesia. Output WAJIB JSON valid." },
-            { role: "user", content: prompt },
-          ],
-        }),
-      });
-      if (!resp.ok) throw new Error(`OpenAI ${resp.status}`);
-      const json = await resp.json() as { choices?: { message?: { content?: string } }[] };
-      return json.choices?.[0]?.message?.content ?? "";
-    };
-
-    let text = "";
     try {
-      // Prefer Lovable AI Gateway (selalu tersedia), fallback ke OpenAI bila gagal.
-      try {
-        text = await callLovable();
-      } catch (e1) {
-        console.warn("Lovable AI failed, trying OpenAI", e1);
-        text = await callOpenAI();
-      }
+      const text = await chatComplete(cfg, [
+        { role: "system", content: "Anda analis intelijen Polri. Jawab ringkas, profesional, Bahasa Indonesia. Output WAJIB JSON valid." },
+        { role: "user", content: prompt },
+      ], { json: true });
 
       const cleaned = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
       const s = cleaned.indexOf("{");
@@ -378,4 +459,5 @@ Balas HANYA JSON valid tanpa markdown:
 
     return { analisa, catatan };
   });
+
 
