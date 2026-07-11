@@ -1,12 +1,14 @@
 import { type ReactNode, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
+import { useBranding } from "@/hooks/useBranding";
 import {
   LayoutDashboard, Database, Brain, FileInput, FileText, Calendar, Archive,
   Wrench, Megaphone, Map, Users, MessageSquare, Bell, ExternalLink, Shield,
   UserCheck, Cpu, LogOut, Menu, X,
 } from "lucide-react";
 import sbtLogo from "@/assets/sbt-logo.jpeg.asset.json";
+
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, code: "01" },
