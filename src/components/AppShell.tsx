@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard, Database, Brain, FileInput, FileText, Calendar, Archive,
   Wrench, Megaphone, Map, Users, MessageSquare, Bell, ExternalLink, Shield,
-  UserCheck, LogOut, Menu, X,
+  UserCheck, Cpu, LogOut, Menu, X,
 } from "lucide-react";
 import sbtLogo from "@/assets/sbt-logo.jpeg.asset.json";
 
