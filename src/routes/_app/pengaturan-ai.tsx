@@ -21,8 +21,11 @@ type Settings = Awaited<ReturnType<typeof getAiSettings>>;
 
 function PengaturanAiPage() {
   const { isSuperAdmin, loading: roleLoading } = useRole();
+  const qc = useQueryClient();
   const getFn = useServerFn(getAiSettings);
   const saveFn = useServerFn(saveAiSettings);
+  const saveBrandFn = useServerFn(saveBranding);
+  const { data: branding, refetch: refetchBranding } = useBranding();
 
   const [settings, setSettings] = useState<Settings | null>(null);
   const [provider, setProvider] = useState<"auto" | "openai" | "lovable">("auto");
@@ -30,6 +33,23 @@ function PengaturanAiPage() {
   const [openaiModel, setOpenaiModel] = useState("gpt-4o-mini");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Branding state
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [short, setShort] = useState("");
+  const [savingBrand, setSavingBrand] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (branding) {
+      setTitle(branding.title);
+      setSubtitle(branding.subtitle);
+      setShort(branding.short);
+    }
+  }, [branding]);
+
 
   useEffect(() => {
     if (!isSuperAdmin) return;
