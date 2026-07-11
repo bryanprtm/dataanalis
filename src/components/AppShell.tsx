@@ -25,6 +25,7 @@ const NAV = [
   { to: "/tools", label: "Link Tools TOC", icon: ExternalLink, code: "14" },
   { to: "/keamanan", label: "Keamanan Sistem", icon: Shield, code: "15" },
   { to: "/personil", label: "Data Personil", icon: UserCheck, code: "16" },
+  { to: "/pengaturan-ai", label: "Pengaturan AI", icon: Cpu, code: "17" },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
