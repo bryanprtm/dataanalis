@@ -97,6 +97,66 @@ function PengaturanAiPage() {
     }
   };
 
+  const handleSaveBranding = async () => {
+    setSavingBrand(true);
+    try {
+      await saveBrandFn({ data: { title, subtitle, short } });
+      toast.success("Identitas aplikasi tersimpan");
+      await refetchBranding();
+      qc.invalidateQueries({ queryKey: ["branding"] });
+    } catch (e) {
+      toast.error("Gagal: " + (e as Error).message);
+    } finally {
+      setSavingBrand(false);
+    }
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("File harus berupa gambar");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Ukuran logo maksimal 2MB");
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("branding").upload(path, file, {
+        upsert: true, contentType: file.type,
+      });
+      if (upErr) throw upErr;
+      await saveBrandFn({ data: { logoPath: path } });
+      toast.success("Logo berhasil diperbarui");
+      await refetchBranding();
+      qc.invalidateQueries({ queryKey: ["branding"] });
+    } catch (e) {
+      toast.error("Gagal upload logo: " + (e as Error).message);
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleClearLogo = async () => {
+    if (!confirm("Hapus logo dan kembalikan ke default?")) return;
+    setUploadingLogo(true);
+    try {
+      await saveBrandFn({ data: { clearLogo: true } });
+      toast.success("Logo dikembalikan ke default");
+      await refetchBranding();
+      qc.invalidateQueries({ queryKey: ["branding"] });
+    } catch (e) {
+      toast.error("Gagal: " + (e as Error).message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+
+
   if (roleLoading) return <div className="p-8 text-xs font-mono-display text-muted-foreground">Loading…</div>;
   if (!isSuperAdmin) {
     return (
