@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Brain as _Brain, Key, Save, Trash2, AlertTriangle } from "lucide-react";
-void _Brain;
+import { Key, Save, Trash2, AlertTriangle } from "lucide-react";
+
 
 import { useRole } from "@/hooks/useRole";
 import { getAiSettings, saveAiSettings } from "@/lib/ai.functions";
