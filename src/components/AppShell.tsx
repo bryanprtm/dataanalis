@@ -1,12 +1,14 @@
 import { type ReactNode, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
+import { useBranding } from "@/hooks/useBranding";
 import {
   LayoutDashboard, Database, Brain, FileInput, FileText, Calendar, Archive,
   Wrench, Megaphone, Map, Users, MessageSquare, Bell, ExternalLink, Shield,
   UserCheck, Cpu, LogOut, Menu, X,
 } from "lucide-react";
 import sbtLogo from "@/assets/sbt-logo.jpeg.asset.json";
+
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, code: "01" },
@@ -32,6 +34,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
+  const { data: branding } = useBranding();
+
+  const logoSrc = branding?.logoUrl || sbtLogo.url;
+  const title = branding?.title || "SAT BANTEK";
+  const subtitle = branding?.subtitle || "[ TOC ]";
+  const short = branding?.short || "SYS_ONLINE · 34_SUBDEN";
 
   return (
     <div className="min-h-screen flex">
@@ -40,17 +48,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded bg-background border border-primary/40 flex items-center justify-center overflow-hidden">
-              <img src={sbtLogo.url} alt="Sat Bantek" className="w-full h-full object-contain" />
+              <img src={logoSrc} alt={title} className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
-              <div className="font-mono-display text-[10px] text-primary tracking-widest">[ TOC ]</div>
-              <div className="font-mono-display text-sm font-bold leading-tight">SAT BANTEK</div>
+              <div className="font-mono-display text-[10px] text-primary tracking-widest">{subtitle}</div>
+              <div className="font-mono-display text-sm font-bold leading-tight">{title}</div>
             </div>
           </div>
           <div className="mt-3 flex items-center gap-2 text-[10px] font-mono-display text-muted-foreground">
-            <span className="blink-dot" /> SYS_ONLINE · 34_SUBDEN
+            <span className="blink-dot" /> {short}
           </div>
         </div>
+
 
         <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
           {NAV.map((item) => {
