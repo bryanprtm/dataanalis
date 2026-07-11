@@ -1,20 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader, Panel, Badge } from "@/components/ui-toc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Key, Save, Trash2, AlertTriangle } from "lucide-react";
-
-
+import { Key, Save, Trash2, AlertTriangle, Upload, Image as ImageIcon } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
+import { useBranding } from "@/hooks/useBranding";
 import { getAiSettings, saveAiSettings } from "@/lib/ai.functions";
+import { saveBranding } from "@/lib/branding.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/pengaturan-ai")({ component: PengaturanAiPage });
 
 type Settings = Awaited<ReturnType<typeof getAiSettings>>;
+
 
 function PengaturanAiPage() {
   const { isSuperAdmin, loading: roleLoading } = useRole();
