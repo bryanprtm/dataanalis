@@ -174,7 +174,67 @@ function PengaturanAiPage() {
 
   return (
     <div>
-      <PageHeader code="17" title="Pengaturan AI" subtitle="Konfigurasi provider AI & token OpenAI untuk deployment VPS" />
+      <PageHeader code="17" title="Pengaturan Aplikasi" subtitle="Identitas aplikasi, logo, dan konfigurasi AI" />
+
+      <Panel title="Identitas Aplikasi & Logo" className="mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
+          <div className="space-y-3">
+            <div className="w-32 h-32 rounded border border-border bg-background flex items-center justify-center overflow-hidden">
+              {branding?.logoUrl ? (
+                <img src={branding.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+              ) : (
+                <ImageIcon className="w-10 h-10 text-muted-foreground" />
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleLogoUpload(f);
+              }}
+            />
+            <div className="flex flex-col gap-2 w-32">
+              <Button type="button" size="sm" variant="secondary" disabled={uploadingLogo}
+                onClick={() => fileInputRef.current?.click()} className="gap-2">
+                <Upload className="w-3.5 h-3.5" /> {uploadingLogo ? "..." : "Ganti Logo"}
+              </Button>
+              {branding?.logoUrl && (
+                <Button type="button" size="sm" variant="ghost" disabled={uploadingLogo}
+                  onClick={handleClearLogo} className="gap-2 text-destructive">
+                  <Trash2 className="w-3.5 h-3.5" /> Hapus
+                </Button>
+              )}
+            </div>
+            <p className="text-[10px] text-muted-foreground w-32">PNG/JPG/SVG, maks 2MB. Rasio 1:1 disarankan.</p>
+          </div>
+
+          <div className="space-y-3 max-w-lg">
+            <div>
+              <Label htmlFor="app-title" className="text-xs font-mono-display">JUDUL APLIKASI</Label>
+              <Input id="app-title" value={title} onChange={(e) => setTitle(e.target.value)}
+                placeholder="SAT BANTEK" maxLength={80} className="mt-1.5" />
+            </div>
+            <div>
+              <Label htmlFor="app-subtitle" className="text-xs font-mono-display">SUBJUDUL / TAG</Label>
+              <Input id="app-subtitle" value={subtitle} onChange={(e) => setSubtitle(e.target.value)}
+                placeholder="[ TOC ]" maxLength={80} className="mt-1.5" />
+            </div>
+            <div>
+              <Label htmlFor="app-short" className="text-xs font-mono-display">STATUS BAR SIDEBAR</Label>
+              <Input id="app-short" value={short} onChange={(e) => setShort(e.target.value)}
+                placeholder="SYS_ONLINE · 34_SUBDEN" maxLength={120} className="mt-1.5" />
+            </div>
+            <Button onClick={handleSaveBranding} disabled={savingBrand} className="gap-2">
+              <Save className="w-4 h-4" /> {savingBrand ? "Menyimpan…" : "Simpan Identitas"}
+            </Button>
+          </div>
+        </div>
+      </Panel>
+
+
 
       <Panel title="Status Provider" className="mb-4">
         {loading ? (
