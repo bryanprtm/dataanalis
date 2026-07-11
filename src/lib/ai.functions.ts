@@ -416,8 +416,7 @@ export const generateLaporanNarasi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => NarasiInput.parse(d))
   .handler(async ({ data }) => {
-    const lovableKey = process.env.LOVABLE_API_KEY;
-    const openaiKey = process.env.OPENAI_API_KEY;
+    const cfg = await loadAiConfig();
     const metaStr = data.meta
       ? Object.entries(data.meta).map(([k, v]) => `${k}: ${v}`).join("\n")
       : "";
@@ -441,59 +440,11 @@ Balas HANYA JSON valid tanpa markdown:
     let analisa = "Berdasarkan fakta-fakta di atas, dilakukan analisa lebih lanjut terkait situasi dan dampak kejadian.";
     let catatan = "Perlu tindak lanjut dan pemantauan berkelanjutan terhadap kejadian ini.";
 
-    const callLovable = async () => {
-      if (!lovableKey) throw new Error("No LOVABLE_API_KEY");
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${lovableKey}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            { role: "system", content: "Anda analis intelijen Polri. Jawab ringkas, profesional, Bahasa Indonesia. Output WAJIB JSON valid tanpa markdown." },
-            { role: "user", content: prompt },
-          ],
-        }),
-      });
-      if (!resp.ok) throw new Error(`Lovable AI ${resp.status}`);
-      const json = await resp.json() as { choices?: { message?: { content?: string } }[] };
-      return json.choices?.[0]?.message?.content ?? "";
-    };
-
-    const callOpenAI = async () => {
-      if (!openaiKey) throw new Error("No OPENAI_API_KEY");
-      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openaiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          temperature: 0.4,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: "Anda analis intelijen Polri. Jawab ringkas, profesional, Bahasa Indonesia. Output WAJIB JSON valid." },
-            { role: "user", content: prompt },
-          ],
-        }),
-      });
-      if (!resp.ok) throw new Error(`OpenAI ${resp.status}`);
-      const json = await resp.json() as { choices?: { message?: { content?: string } }[] };
-      return json.choices?.[0]?.message?.content ?? "";
-    };
-
-    let text = "";
     try {
-      // Prefer Lovable AI Gateway (selalu tersedia), fallback ke OpenAI bila gagal.
-      try {
-        text = await callLovable();
-      } catch (e1) {
-        console.warn("Lovable AI failed, trying OpenAI", e1);
-        text = await callOpenAI();
-      }
+      const text = await chatComplete(cfg, [
+        { role: "system", content: "Anda analis intelijen Polri. Jawab ringkas, profesional, Bahasa Indonesia. Output WAJIB JSON valid." },
+        { role: "user", content: prompt },
+      ], { json: true });
 
       const cleaned = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
       const s = cleaned.indexOf("{");
@@ -508,4 +459,5 @@ Balas HANYA JSON valid tanpa markdown:
 
     return { analisa, catatan };
   });
+
 
