@@ -11,9 +11,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { MapPin, AlertTriangle, Sparkles, Loader2 } from "lucide-react";
+import { MapPin, AlertTriangle, Sparkles, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { analyzePetaOperasional } from "@/lib/ai.functions";
+import { getPetaAggregate } from "@/lib/peta.functions";
+import { useRole } from "@/hooks/useRole";
 import mapAsset from "@/assets/indonesia-provinces.geojson.asset.json";
 
 export const Route = createFileRoute("/_app/peta")({ component: PetaPage });
