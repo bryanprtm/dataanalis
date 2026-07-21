@@ -11,9 +11,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { MapPin, AlertTriangle, Sparkles, Loader2 } from "lucide-react";
+import { MapPin, AlertTriangle, Sparkles, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { analyzePetaOperasional } from "@/lib/ai.functions";
+import { getPetaAggregate } from "@/lib/peta.functions";
+import { useRole } from "@/hooks/useRole";
 import mapAsset from "@/assets/indonesia-provinces.geojson.asset.json";
 
 export const Route = createFileRoute("/_app/peta")({ component: PetaPage });
@@ -199,6 +201,7 @@ function matchProvince(polda: string | null, province: string): boolean {
 }
 
 function PetaPage() {
+  const { isAdmin } = useRole();
   const [selected, setSelected] = useState<string | null>(null);
   const [hover, setHover] = useState<{ name: string; x: number; y: number } | null>(null);
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
@@ -207,6 +210,7 @@ function PetaPage() {
     null,
   );
   const draggedRef = useRef(false);
+  const aggregateFn = useServerFn(getPetaAggregate);
 
   const { data: geoData } = useQuery<GeoCollection>({
     queryKey: ["indo-geojson-34-provinces"],
@@ -218,12 +222,20 @@ function PetaPage() {
     staleTime: Infinity,
   });
 
+  // Aggregate ringan (polda + urgensi saja) — dapat dibaca semua authenticated
+  // sehingga operator dapat melihat jumlah & tingkat kerawanan laporan operator lain.
+  const { data: aggregate } = useQuery({
+    queryKey: ["peta-aggregate"],
+    queryFn: async () => aggregateFn(),
+  });
+
+  // Data laporan penuh — dibatasi RLS: admin lihat semua, operator hanya milik sendiri.
   const { data: laps } = useQuery({
     queryKey: ["peta-laps"],
     queryFn: async () => {
       const { data } = await supabase
         .from("laporan")
-        .select("id,judul,polda,urgensi,wilayah,isi,created_at")
+        .select("id,judul,polda,urgensi,wilayah,isi,created_at,created_by")
         .order("created_at", { ascending: false })
         .limit(500);
       return data ?? [];
@@ -249,18 +261,28 @@ function PetaPage() {
   const counts = useMemo(() => {
     const map: Record<string, number> = {};
     for (const { name } of provinceFeatures) map[name] = 0;
-    for (const lap of laps ?? []) {
-      const province = provinceFeatures.find(({ name }) => matchProvince(lap.polda, name));
+    for (const row of aggregate ?? []) {
+      const province = provinceFeatures.find(({ name }) => matchProvince(row.polda, name));
       if (province) map[province.name] += 1;
     }
     return map;
-  }, [laps, provinceFeatures]);
+  }, [aggregate, provinceFeatures]);
 
   const maxCount = Math.max(...Object.values(counts), 1);
   const selectedReports = useMemo(
     () => (laps ?? []).filter((lap) => selected && matchProvince(lap.polda, selected)),
     [laps, selected],
   );
+  const selectedUrgensi = useMemo(() => {
+    const acc: Record<string, number> = { rendah: 0, sedang: 0, tinggi: 0, kritis: 0 };
+    for (const row of aggregate ?? []) {
+      if (selected && matchProvince(row.polda, selected)) {
+        acc[row.urgensi] = (acc[row.urgensi] ?? 0) + 1;
+      }
+    }
+    return acc;
+  }, [aggregate, selected]);
+  const selectedTotal = counts[selected ?? ""] ?? 0;
 
   const fillFor = (count: number) => {
     if (count === 0) return "oklch(0.28 0.04 200 / 0.62)";
@@ -501,11 +523,32 @@ function PetaPage() {
               <MapPin className="w-4 h-4 text-primary" /> {selected}
             </DialogTitle>
             <DialogDescription className="font-mono-display text-xs">
-              [ {selectedReports.length} LAPORAN_TERCATAT ]
+              [ {selectedTotal} LAPORAN_TERCATAT{!isAdmin ? " · MODE_RINGKASAN" : ""} ]
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto space-y-2">
-            {selectedReports.length === 0 && (
+
+          {/* Ringkasan tingkat kerawanan — tampil untuk semua role */}
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {(["rendah", "sedang", "tinggi", "kritis"] as const).map((u) => (
+              <div key={u} className="p-2 rounded bg-muted/30 border border-primary/20 text-center">
+                <div className="text-[10px] font-mono-display text-muted-foreground uppercase">{u}</div>
+                <div className="text-lg font-mono-display text-primary">{selectedUrgensi[u] ?? 0}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="max-h-[50vh] overflow-y-auto space-y-2">
+            {!isAdmin && selectedReports.length === 0 && selectedTotal > 0 && (
+              <div className="text-center py-6 text-xs font-mono-display text-muted-foreground border border-dashed border-primary/20 rounded">
+                <Lock className="w-6 h-6 mx-auto mb-2 opacity-60" />
+                [ AKSES_DETAIL_TERBATAS ]
+                <p className="mt-2 normal-case font-sans text-[11px]">
+                  Sebagai operator, Anda hanya dapat melihat jumlah & tingkat kerawanan laporan
+                  dari wilayah ini. Detail laporan hanya tersedia untuk pemilik laporan & admin.
+                </p>
+              </div>
+            )}
+            {selectedTotal === 0 && (
               <div className="text-center py-8 text-xs font-mono-display text-muted-foreground">
                 [ NO_REPORTS_IN_SECTOR ]
               </div>
@@ -544,6 +587,7 @@ function PetaPage() {
               </div>
             ))}
           </div>
+
         </DialogContent>
       </Dialog>
     </div>
