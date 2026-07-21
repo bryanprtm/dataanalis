@@ -213,15 +213,24 @@ function BigDataPage() {
                   >
                     ← PREV
                   </button>
-                  {Array.from({ length: totalPages }).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setPage(i + 1)}
-                      className={`w-8 h-8 text-[10px] font-mono-display border rounded ${curPage === i + 1 ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-accent"}`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+                  {(() => {
+                    const WINDOW = 10;
+                    let from = Math.max(1, curPage - Math.floor(WINDOW / 2));
+                    const to = Math.min(totalPages, from + WINDOW - 1);
+                    from = Math.max(1, to - WINDOW + 1);
+                    return Array.from({ length: to - from + 1 }).map((_, i) => {
+                      const n = from + i;
+                      return (
+                        <button
+                          key={n}
+                          onClick={() => setPage(n)}
+                          className={`w-8 h-8 text-[10px] font-mono-display border rounded ${curPage === n ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-accent"}`}
+                        >
+                          {n}
+                        </button>
+                      );
+                    });
+                  })()}
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={curPage === totalPages}
