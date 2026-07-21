@@ -523,11 +523,32 @@ function PetaPage() {
               <MapPin className="w-4 h-4 text-primary" /> {selected}
             </DialogTitle>
             <DialogDescription className="font-mono-display text-xs">
-              [ {selectedReports.length} LAPORAN_TERCATAT ]
+              [ {selectedTotal} LAPORAN_TERCATAT{!isAdmin ? " · MODE_RINGKASAN" : ""} ]
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto space-y-2">
-            {selectedReports.length === 0 && (
+
+          {/* Ringkasan tingkat kerawanan — tampil untuk semua role */}
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {(["rendah", "sedang", "tinggi", "kritis"] as const).map((u) => (
+              <div key={u} className="p-2 rounded bg-muted/30 border border-primary/20 text-center">
+                <div className="text-[10px] font-mono-display text-muted-foreground uppercase">{u}</div>
+                <div className="text-lg font-mono-display text-primary">{selectedUrgensi[u] ?? 0}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="max-h-[50vh] overflow-y-auto space-y-2">
+            {!isAdmin && selectedReports.length === 0 && selectedTotal > 0 && (
+              <div className="text-center py-6 text-xs font-mono-display text-muted-foreground border border-dashed border-primary/20 rounded">
+                <Lock className="w-6 h-6 mx-auto mb-2 opacity-60" />
+                [ AKSES_DETAIL_TERBATAS ]
+                <p className="mt-2 normal-case font-sans text-[11px]">
+                  Sebagai operator, Anda hanya dapat melihat jumlah & tingkat kerawanan laporan
+                  dari wilayah ini. Detail laporan hanya tersedia untuk pemilik laporan & admin.
+                </p>
+              </div>
+            )}
+            {selectedTotal === 0 && (
               <div className="text-center py-8 text-xs font-mono-display text-muted-foreground">
                 [ NO_REPORTS_IN_SECTOR ]
               </div>
@@ -566,6 +587,7 @@ function PetaPage() {
               </div>
             ))}
           </div>
+
         </DialogContent>
       </Dialog>
     </div>
