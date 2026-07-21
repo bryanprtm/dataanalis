@@ -201,6 +201,7 @@ function matchProvince(polda: string | null, province: string): boolean {
 }
 
 function PetaPage() {
+  const { isAdmin } = useRole();
   const [selected, setSelected] = useState<string | null>(null);
   const [hover, setHover] = useState<{ name: string; x: number; y: number } | null>(null);
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
@@ -209,6 +210,7 @@ function PetaPage() {
     null,
   );
   const draggedRef = useRef(false);
+  const aggregateFn = useServerFn(getPetaAggregate);
 
   const { data: geoData } = useQuery<GeoCollection>({
     queryKey: ["indo-geojson-34-provinces"],
@@ -220,12 +222,20 @@ function PetaPage() {
     staleTime: Infinity,
   });
 
+  // Aggregate ringan (polda + urgensi saja) — dapat dibaca semua authenticated
+  // sehingga operator dapat melihat jumlah & tingkat kerawanan laporan operator lain.
+  const { data: aggregate } = useQuery({
+    queryKey: ["peta-aggregate"],
+    queryFn: async () => aggregateFn(),
+  });
+
+  // Data laporan penuh — dibatasi RLS: admin lihat semua, operator hanya milik sendiri.
   const { data: laps } = useQuery({
     queryKey: ["peta-laps"],
     queryFn: async () => {
       const { data } = await supabase
         .from("laporan")
-        .select("id,judul,polda,urgensi,wilayah,isi,created_at")
+        .select("id,judul,polda,urgensi,wilayah,isi,created_at,created_by")
         .order("created_at", { ascending: false })
         .limit(500);
       return data ?? [];
@@ -251,18 +261,28 @@ function PetaPage() {
   const counts = useMemo(() => {
     const map: Record<string, number> = {};
     for (const { name } of provinceFeatures) map[name] = 0;
-    for (const lap of laps ?? []) {
-      const province = provinceFeatures.find(({ name }) => matchProvince(lap.polda, name));
+    for (const row of aggregate ?? []) {
+      const province = provinceFeatures.find(({ name }) => matchProvince(row.polda, name));
       if (province) map[province.name] += 1;
     }
     return map;
-  }, [laps, provinceFeatures]);
+  }, [aggregate, provinceFeatures]);
 
   const maxCount = Math.max(...Object.values(counts), 1);
   const selectedReports = useMemo(
     () => (laps ?? []).filter((lap) => selected && matchProvince(lap.polda, selected)),
     [laps, selected],
   );
+  const selectedUrgensi = useMemo(() => {
+    const acc: Record<string, number> = { rendah: 0, sedang: 0, tinggi: 0, kritis: 0 };
+    for (const row of aggregate ?? []) {
+      if (selected && matchProvince(row.polda, selected)) {
+        acc[row.urgensi] = (acc[row.urgensi] ?? 0) + 1;
+      }
+    }
+    return acc;
+  }, [aggregate, selected]);
+  const selectedTotal = counts[selected ?? ""] ?? 0;
 
   const fillFor = (count: number) => {
     if (count === 0) return "oklch(0.28 0.04 200 / 0.62)";
